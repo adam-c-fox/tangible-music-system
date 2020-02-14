@@ -2,3 +2,5 @@ secrets.h
 .travis.yml
 .vscode
 .DS_STORE
+server/png/
+server/.cache-adamfox26

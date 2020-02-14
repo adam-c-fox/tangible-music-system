@@ -70,9 +70,12 @@ void loop() {
         displayText((const char*) obj["item"]["name"], 10, 10, 1);
         displayText((const char*) obj["item"]["album"]["name"], 10, 20, 1);
         displayText((const char*) obj["item"]["artists"][0]["name"], 10, 30, 1);
-        //M5.Lcd.drawPngUrl((const char*) obj["item"]["album"]["images"][0]["url"], 100, 100);
-        //M5.Lcd.drawPngUrl("https://upload.wikimedia.org/wikipedia/commons/d/d9/Test.png", 0, 0);
+
+        String png_artwork_url = httpGET("http://192.168.0.38:5000/playback-state/image-url");
+        char url[256];
+        png_artwork_url.toCharArray(url, png_artwork_url.length()+1);
+        M5.Lcd.drawPngUrl(url, 10, 50);
     }
 
-    delay(2000);
+    delay(5000);
 }

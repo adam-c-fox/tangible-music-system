@@ -3,6 +3,13 @@ import spotipy
 import spotipy.util as util
 import flask
 from flask import request, jsonify
+import wget
+from PIL import Image
+import os
+import re
+from random import seed
+from random import randint 
+seed(1)
 
 # FLASK CONFIG
 app = flask.Flask(__name__)
@@ -19,7 +26,19 @@ def playback_state():
 @app.route('/playback-state/image-url', methods=['GET'])
 def playback_state_image_url():
     sp = return_spotipy("user-read-playback-state")
-    return sp.currently_playing()['item']['album']['images'][0]['url']
+    image_url = sp.currently_playing()['item']['album']['images'][0]['url']
+    filename = wget.download(image_url, os.getcwd() + "/download")
+
+    im = Image.open(filename)
+    new_im = im.resize((160, 160))
+    new_filename = os.getcwd() + "/png/" + str(randint(1, 99999)) + ".png"
+    new_im.save(new_filename)
+
+    #TODO: change to only download art we don't have
+    os.remove(filename)
+
+    png_image_url = "http://192.168.0.38:5001/" + re.search("png/.*", new_filename).group()
+    return png_image_url
 
 
 
