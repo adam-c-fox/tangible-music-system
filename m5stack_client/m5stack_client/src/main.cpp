@@ -1,32 +1,55 @@
 #include <Arduino_JSON.h>
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WiFiMulti.h>
+#include <WebSocketClient.h>
 #include <HTTPClient.h>
 #include <M5Stack.h>
 #include <secrets.h>
+//#include <ArduinoHttpClient.h>
 
-#define USE_SERIAL Serial
-
-WiFiMulti wifiMulti;
+WebSocketClient wsClient;
+WiFiClient wifiClient;
+#define HOST "192.168.0.38"
+#define PORT 8000
+#define PATH "/"
 
 void setup() {
     M5.begin();
     M5.Power.begin();
+    Serial.begin(115200);
+    delay(1000);
 
-    USE_SERIAL.begin(115200);
+    Serial.print("\nConnecting: ");
+    Serial.println(WIFI_SSID);
+    
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-    USE_SERIAL.println();
-    USE_SERIAL.println();
-    USE_SERIAL.println();
-
-    for(int t = 0; t < 4; t++) {
-        USE_SERIAL.printf("[BOOT] %d...\n", t);
-        USE_SERIAL.flush();
-        delay(1000);
+    while(WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print('.');
     }
 
-    wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
+    Serial.println();
+    Serial.println("WiFi connected");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+
+
+    // WebSocket server connection
+    if (!wifiClient.connect(HOST, PORT)) {
+      Serial.println("Connection to server failed.");
+    }
+    Serial.println("Connected to server.");
+
+    wsClient.path = PATH;
+    wsClient.host = HOST;
+
+    if(!wsClient.handshake(wifiClient)) {
+      Serial.println("Handshake failed.");
+    }
+    Serial.println("Handshake succeeded.");
+
+
 }
 
 String httpGET(String url) {
@@ -36,15 +59,15 @@ String httpGET(String url) {
     http.begin(url);
     int httpCode = http.GET();
 
-    USE_SERIAL.printf("[HTTP] GET\n");
+    Serial.printf("[HTTP] GET\n");
 
     if(httpCode > 0) {
       if(httpCode == HTTP_CODE_OK) {
         payload = http.getString();
-        USE_SERIAL.printf("[HTTP] payload received\n");
+        Serial.printf("[HTTP] payload received\n");
       }
     } else {
-      USE_SERIAL.printf("[HTTP] GET failed w/ error: %s\n", http.errorToString(httpCode).c_str());
+      Serial.printf("[HTTP] GET failed w/ error: %s\n", http.errorToString(httpCode).c_str());
     }
 
     http.end();
@@ -59,23 +82,48 @@ void displayText(String text, int x, int y, int size) {
 }
 
 void loop() {
-    if((wifiMulti.run() == WL_CONNECTED)) {
-        String payload = httpGET("http://192.168.0.38:5000/playback-state");
-        JSONVar obj = JSON.parse(payload); 
-         
-        //USE_SERIAL.println(payload);               
-        //USE_SERIAL.println((const char*) obj["item"]["name"]);
+  String data;
 
-        M5.Lcd.fillScreen(TFT_BLACK);
-        displayText((const char*) obj["item"]["name"], 10, 10, 1);
-        displayText((const char*) obj["item"]["album"]["name"], 10, 20, 1);
-        displayText((const char*) obj["item"]["artists"][0]["name"], 10, 30, 1);
+  if(wifiClient.connected()) {
+    wsClient.getData(data);
 
-        String png_artwork_url = httpGET("http://192.168.0.38:5000/playback-state/image-url");
-        char url[256];
-        png_artwork_url.toCharArray(url, png_artwork_url.length()+1);
-        M5.Lcd.drawPngUrl(url, 10, 50);
+    if(data.length() > 0) {
+      Serial.print("data: ");
+      Serial.println(data);
     }
+    data = "";
 
-    delay(5000);
+  } else {
+    Serial.println("wifiClient disconnected.");
+
+    if (!wifiClient.connect(HOST, PORT)) {
+      Serial.println("Re-connection to server failed.");
+    }
+    Serial.println("Reconnected to server.");
+  }
+
+
+  delay(1000);
 }
+
+//void loop() {
+//    if((wifiMulti.run() == WL_CONNECTED)) {
+//        String payload = httpGET("http://192.168.0.38:5000/playback-state");
+//        JSONVar obj = JSON.parse(payload); 
+//         
+//        //USE_SERIAL.println(payload);               
+//        //USE_SERIAL.println((const char*) obj["item"]["name"]);
+//
+//        M5.Lcd.fillScreen(TFT_BLACK);
+//        displayText((const char*) obj["item"]["name"], 10, 10, 1);
+//        displayText((const char*) obj["item"]["album"]["name"], 10, 20, 1);
+//        displayText((const char*) obj["item"]["artists"][0]["name"], 10, 30, 1);
+//
+//        String png_artwork_url = httpGET("http://192.168.0.38:5000/playback-state/image-url");
+//        char url[256];
+//        png_artwork_url.toCharArray(url, png_artwork_url.length()+1);
+//        M5.Lcd.drawPngUrl(url, 10, 50);
+//    }
+//
+//    delay(5000);
+//}
