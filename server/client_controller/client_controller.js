@@ -1,13 +1,19 @@
+// Websockets
 const webSocketsServerPort = 8000;
 const webSocketServer = require('websocket').server;
 const http = require('http');
-
 const server = http.createServer();
 server.listen(webSocketsServerPort);
-
 const wsServer = new webSocketServer({
   httpServer: server
 });
+
+// Express
+const express = require('express');
+const app = express();
+const port = 8001;
+app.get('/', (req, res) => res.send(as))
+app.use(express.json());
 
 
 const clients = {};
@@ -23,7 +29,10 @@ wsServer.on('request', function(request) {
   const connection = request.accept(null, request.origin);
   clients[userID] = connection;
   console.log('connected: ' + userID + ' in ' + Object.getOwnPropertyNames(clients))
-  //console.log('request: ', request);
+
+  connection.on('message', function(message) {
+    console.log("message: ", message);
+  });
 
   wsServer.on('close', function(connection) {
     console.log((new Date()) + " Peer " + userID + " disconnected.");
@@ -31,3 +40,19 @@ wsServer.on('request', function(request) {
   });
 });
 
+
+app.post('/send/image', function(req, res) {
+  var ID = req.query.ID;
+  var pngUrl = req.query.pngUrl;
+  var x = req.query.x;
+  var y = req.query.y;
+
+  const json = { command:"pngUrl", url:pngUrl, x:x, y:y };
+  console.log(json);
+
+  clients[ID].sendUTF(JSON.stringify(json));
+  
+  res.status(200).send();
+});
+
+app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
