@@ -1,17 +1,43 @@
 #include <Arduino_JSON.h>
 #include <Arduino.h>
 #include <WiFi.h>
-#include <WebSocketClient.h>
 #include <HTTPClient.h>
 #include <M5Stack.h>
 #include <secrets.h>
 //#include <ArduinoHttpClient.h>
+#include <ArduinoWebsockets.h>
 
-WebSocketClient wsClient;
 WiFiClient wifiClient;
 #define HOST "192.168.0.38"
 #define PORT 8000
 #define PATH "/"
+
+using namespace websockets;
+WebsocketsClient wsClient;
+
+void onMessage(WebsocketsMessage message) {
+  Serial.print("Message: ");
+  Serial.println(message.data());
+
+  JSONVar obj = JSON.parse(message.data()); 
+  String messageType = (const char *) obj["command"];
+
+  if(messageType == "pngUrl") {
+    M5.Lcd.drawPngUrl((const char *) obj["url"], (int) obj["x"], (int) obj["y"]);
+  }
+}
+
+void onEvent(WebsocketsEvent event, String data) {
+    if(event == WebsocketsEvent::ConnectionOpened) {
+        Serial.println("Connnection Opened");
+    } else if(event == WebsocketsEvent::ConnectionClosed) {
+        Serial.println("Connnection Closed");
+    } else if(event == WebsocketsEvent::GotPing) {
+        Serial.println("Got a Ping!");
+    } else if(event == WebsocketsEvent::GotPong) {
+        Serial.println("Got a Pong!");
+    }
+}
 
 void setup() {
     M5.begin();
@@ -36,20 +62,12 @@ void setup() {
 
 
     // WebSocket server connection
-    if (!wifiClient.connect(HOST, PORT)) {
-      Serial.println("Connection to server failed.");
-    }
-    Serial.println("Connected to server.");
+    wsClient.onMessage(onMessage);
+    wsClient.onEvent(onEvent);
+    wsClient.connect("ws://192.168.0.38:8000/");
+    wsClient.ping();
 
-    wsClient.path = PATH;
-    wsClient.host = HOST;
-
-    if(!wsClient.handshake(wifiClient)) {
-      Serial.println("Handshake failed.");
-    }
-    Serial.println("Handshake succeeded.");
-
-
+    wsClient.send("HELLO SERVER!!!");
 }
 
 String httpGET(String url) {
@@ -82,28 +100,7 @@ void displayText(String text, int x, int y, int size) {
 }
 
 void loop() {
-  String data;
-
-  if(wifiClient.connected()) {
-    wsClient.getData(data);
-
-    if(data.length() > 0) {
-      Serial.print("data: ");
-      Serial.println(data);
-    }
-    data = "";
-
-  } else {
-    Serial.println("wifiClient disconnected.");
-
-    if (!wifiClient.connect(HOST, PORT)) {
-      Serial.println("Re-connection to server failed.");
-    }
-    Serial.println("Reconnected to server.");
-  }
-
-
-  delay(1000);
+  wsClient.poll();
 }
 
 //void loop() {
