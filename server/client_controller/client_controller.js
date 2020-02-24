@@ -40,7 +40,6 @@ wsServer.on('request', function(request) {
   });
 });
 
-
 app.post('/send/image', function(req, res) {
   var ID = req.query.ID;
   var pngUrl = req.query.pngUrl;
@@ -48,6 +47,20 @@ app.post('/send/image', function(req, res) {
   var y = req.query.y;
 
   const json = { command:"pngUrl", url:pngUrl, x:x, y:y };
+  console.log(json);
+
+  clients[ID].sendUTF(JSON.stringify(json));
+  
+  res.status(200).send();
+});
+
+app.post('/send/text', function(req, res) {
+  var ID = req.query.ID;
+  var text = req.query.text;
+  var x = Number(req.query.x);
+  var y = Number(req.query.y);
+
+  const json = { command:"text", text:text, x:x, y:y };
   console.log(json);
 
   clients[ID].sendUTF(JSON.stringify(json));

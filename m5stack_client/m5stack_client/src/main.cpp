@@ -8,12 +8,17 @@
 #include <ArduinoWebsockets.h>
 
 WiFiClient wifiClient;
-#define HOST "192.168.0.38"
-#define PORT 8000
-#define PATH "/"
+#define HOST "ws://192.168.0.38:8000/clients"
 
 using namespace websockets;
 WebsocketsClient wsClient;
+
+void displayText(String text, int x, int y, int size) {
+  M5.Lcd.setTextWrap(false, false);
+  M5.Lcd.setCursor(x, y);
+  M5.Lcd.setTextSize(size);
+  M5.Lcd.print(text);
+}
 
 void onMessage(WebsocketsMessage message) {
   Serial.print("Message: ");
@@ -24,6 +29,9 @@ void onMessage(WebsocketsMessage message) {
 
   if(messageType == "pngUrl") {
     M5.Lcd.drawPngUrl((const char *) obj["url"], (int) obj["x"], (int) obj["y"]);
+    wsClient.poll();
+  } else if (messageType == "text") {
+    displayText((const char *) obj["text"], (int) obj["x"], (int) obj["y"], 2);
   }
 }
 
@@ -64,8 +72,11 @@ void setup() {
     // WebSocket server connection
     wsClient.onMessage(onMessage);
     wsClient.onEvent(onEvent);
-    wsClient.connect("ws://192.168.0.38:8000/");
+    wsClient.connect(HOST);
     wsClient.ping();
+
+    Serial.print("[wsClient] Connected to: ");
+    Serial.println(HOST);
 
     wsClient.send("HELLO SERVER!!!");
 }
@@ -90,13 +101,6 @@ String httpGET(String url) {
 
     http.end();
     return payload;
-}
-
-void displayText(String text, int x, int y, int size) {
-  M5.Lcd.setTextWrap(false, false);
-  M5.Lcd.setCursor(x, y);
-  M5.Lcd.setTextSize(size);
-  M5.Lcd.print(text);
 }
 
 void loop() {
