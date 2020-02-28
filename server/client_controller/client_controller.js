@@ -1,44 +1,77 @@
 // Websockets
-const webSocketsServerPort = 8000;
 const webSocketServer = require('websocket').server;
 const http = require('http');
-const server = http.createServer();
-server.listen(webSocketsServerPort);
-const wsServer = new webSocketServer({
-  httpServer: server
+
+// WS - Clients 
+const clientsWsPort = 8000;
+const clientsServer = http.createServer();
+clientsServer.listen(clientsWsPort);
+const clientsWsServer = new webSocketServer({
+  httpServer: clientsServer
+});
+
+// WS - Frontend
+const frontendWsPort = 8001;
+const frontendServer = http.createServer();
+frontendServer.listen(frontendWsPort);
+const frontendWsServer = new webSocketServer({
+  httpServer: frontendServer 
 });
 
 // Express
 const express = require('express');
+var cors = require("cors");
 const app = express();
-const port = 8001;
+const port = 8002;
 app.get('/', (req, res) => res.send(as))
 app.use(express.json());
+app.use(cors());
 
 
 const clients = {};
 
+function clientsLog(text) {
+  console.log('[clients] ' + text);
+}
+
+function frontendLog(text) {
+  console.log('[frontend] ' + text);
+}
+
 const getUniqueID = () => {
-  const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-  return s4() + s4() + '-' + s4();
+  //const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+  //return s4() + s4() + '-' + s4();
+
+  return Object.keys(clients).length;
 };
 
-wsServer.on('request', function(request) {
+
+
+// WEBSOCKETS ----------------------------------------  
+
+clientsWsServer.on('request', function(request) {
   var userID = getUniqueID();
-  console.log((new Date()) + ' Recieved a new connection from origin ' + request.origin + '.');
+  clientsLog((new Date()) + ' Recieved a new connection from origin ' + request.origin + '.');
   const connection = request.accept(null, request.origin);
   clients[userID] = connection;
-  console.log('connected: ' + userID + ' in ' + Object.getOwnPropertyNames(clients))
+  clientsLog('connected: ' + userID + ' in ' + Object.getOwnPropertyNames(clients))
+  
+  // Display ID on LCD
+  connection.sendUTF("{ \"command\": \"text\", \"text\":\"" + userID + "\", \"x\": 10, \"y\": 10 }")
 
   connection.on('message', function(message) {
-    console.log("message: ", message);
+    clientsLog("message: " + message.utf8Data);
   });
 
-  wsServer.on('close', function(connection) {
-    console.log((new Date()) + " Peer " + userID + " disconnected.");
+  clientsWsServer.on('close', function(connection) {
+    clientsLog((new Date()) + " Peer " + userID + " disconnected.");
     delete clients[userID];
   });
 });
+
+
+
+// ENDPOINTS ----------------------------------------  
 
 app.post('/send/image', function(req, res) {
   var ID = req.query.ID;
@@ -66,6 +99,10 @@ app.post('/send/text', function(req, res) {
   clients[ID].sendUTF(JSON.stringify(json));
   
   res.status(200).send();
+});
+
+app.get('/client/list', function(req, res) {
+  res.json(Object.keys(clients));
 });
 
 app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
