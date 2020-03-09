@@ -4,12 +4,26 @@
 #include <HTTPClient.h>
 #include <M5Stack.h>
 #include <secrets.h>
-//#include <ArduinoHttpClient.h>
 #include <ArduinoWebsockets.h>
+#include "utility/MPU6886.h"
 
+#define HOST "ws://192.168.0.14:8000"
+
+// Accelerometer
+float accX = 0;
+float accY = 0;
+float accZ = 0;
+float threshold = 0.1;
+float stationaryX = 0;
+float stationaryY = 0;
+float stationaryZ = 1;
+int previousStationaryState = 3;
+bool previousState = true;
+int buffer [5];
+MPU6886 mpu;
+
+// Websockets
 WiFiClient wifiClient;
-#define HOST "ws://192.168.0.38:8000/clients"
-
 using namespace websockets;
 WebsocketsClient wsClient;
 
@@ -55,7 +69,6 @@ void setup() {
 
     Serial.print("\nConnecting: ");
     Serial.println(WIFI_SSID);
-    
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     while(WiFi.status() != WL_CONNECTED) {
@@ -68,7 +81,6 @@ void setup() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-
     // WebSocket server connection
     wsClient.onMessage(onMessage);
     wsClient.onEvent(onEvent);
@@ -77,8 +89,10 @@ void setup() {
 
     Serial.print("[wsClient] Connected to: ");
     Serial.println(HOST);
+    wsClient.send("hello");
 
-    wsClient.send("HELLO SERVER!!!");
+    // MPU6886
+    mpu.Init();
 }
 
 String httpGET(String url) {
@@ -103,28 +117,42 @@ String httpGET(String url) {
     return payload;
 }
 
-void loop() {
-  wsClient.poll();
+bool isStationary() {
+  mpu.getAccelData(&accX, &accY, &accZ);
+  float value = (accX-stationaryX) + (accY-stationaryY) + (accZ-stationaryZ);
+
+  // Populate buffer
+  for (int i=4; i>0; i--) {
+    buffer[i] = buffer[i-1];
+  }
+  buffer[0] = value > threshold;
+
+  // Poll buffer  
+  int count = 0;
+  for (int i=0; i<5; i++) {
+    count += buffer[i];
+  }
+
+  if (count > previousStationaryState) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
-//void loop() {
-//    if((wifiMulti.run() == WL_CONNECTED)) {
-//        String payload = httpGET("http://192.168.0.38:5000/playback-state");
-//        JSONVar obj = JSON.parse(payload); 
-//         
-//        //USE_SERIAL.println(payload);               
-//        //USE_SERIAL.println((const char*) obj["item"]["name"]);
-//
-//        M5.Lcd.fillScreen(TFT_BLACK);
-//        displayText((const char*) obj["item"]["name"], 10, 10, 1);
-//        displayText((const char*) obj["item"]["album"]["name"], 10, 20, 1);
-//        displayText((const char*) obj["item"]["artists"][0]["name"], 10, 30, 1);
-//
-//        String png_artwork_url = httpGET("http://192.168.0.38:5000/playback-state/image-url");
-//        char url[256];
-//        png_artwork_url.toCharArray(url, png_artwork_url.length()+1);
-//        M5.Lcd.drawPngUrl(url, 10, 50);
-//    }
-//
-//    delay(5000);
-//}
+void loop() {
+  wsClient.poll();
+
+  bool stationary = isStationary();
+  if (stationary != previousStationaryState) {
+    stationary ?
+      M5.lcd.fillRect(315, 0, 5, 5, BLACK) :
+      M5.lcd.fillRect(315, 0, 5, 5, WHITE);
+
+    previousStationaryState = stationary;
+  }
+
+  //TODO: send stationary state to server
+
+  delay(100);
+}
