@@ -38,7 +38,7 @@ class Stack extends Component {
         <form onSubmit={this.onSubmit}>
           <label>
             {this.props.index} : PNG URL  
-              <input type="text" name="url" onChange={this.onChange} />
+              <input type="text" name="url" onChange={this.onChange} size="80"/>
           </label>
           <input type="submit" value="Submit" />
         </form>
@@ -47,24 +47,77 @@ class Stack extends Component {
   }
 }
 
+class Group extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      request: null,
+    }
+
+    this.onButtonClick = this.onButtonClick.bind(this);
+    this.handleLoad = this.handleLoad.bind(this);
+  }
+
+  handleLoad(e) {
+    var imageList = this.state.request.response.split("\n");
+
+    this.props.clientList.forEach(element => {
+      var index = Math.floor(Math.random() * (imageList.length-1));
+      var url = imageList[index];
+      imageList.splice(index, 1);
+
+      console.log(element + ": " + url);
+
+      const bodyString = "ID=" + element + "&pngUrl=" + url + "&x=30&y=30";
+      fetch("http://127.0.0.1:8002/send/image?" + bodyString, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+    });
+  }
+
+  onButtonClick() {
+    var result = null;
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.addEventListener('load', this.handleLoad);
+    xmlhttp.open("GET", "http://192.168.0.14:5001/" + this.props.name + "/manifest.txt", true)
+    xmlhttp.send();
+
+    this.setState({ request: xmlhttp });
+  }
+
+  render() {
+    return (
+      <div className="group">
+        <button onClick={this.onButtonClick}>{this.props.name}</button>
+      </div>
+    )
+  }
+}
+
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = { 
-      apiResponse: [],
+      clientList: [],
     };
   }
 
   renderStack(i) {
-    return <Stack 
-      index={i} 
-    />
+    return < Stack index={i} />
+  }
+
+  renderGroup(name, clientList) {
+    return < Group name={name} clientList={clientList} />
   }
 
   getClientList() {
     fetch("http://127.0.0.1:8002/client/list")
       .then(res => res.json())
-      .then(res => this.setState({ apiResponse: res }))
+      .then(res => this.setState({ clientList: res }))
   }
 
   componentWillMount() {
@@ -72,13 +125,18 @@ class App extends Component {
   }
   
   render() {
-    var elements=[];
-    this.state.apiResponse.forEach(element => elements.push(this.renderStack(element)));
+    var stacks=[];
+    this.state.clientList.forEach(element => stacks.push(this.renderStack(element)));
+
+    var groups = [this.renderGroup("test", this.state.clientList)];
 
     return (
       <div className="App">
         <h1>client_controller</h1>
-        <p>{elements}</p>
+        <p>{stacks}</p>
+
+        <h2>group_send</h2>
+        <p>{groups}</p>
       </div>
     );
   }
