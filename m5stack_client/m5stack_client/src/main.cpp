@@ -150,9 +150,13 @@ void loop() {
       M5.lcd.fillRect(315, 0, 5, 5, WHITE);
 
     previousStationaryState = stationary;
-  }
 
-  //TODO: send stationary state to server
+    // Send state to server
+    JSONVar obj;
+    obj["focus"] = !stationary;
+    String json = JSON.stringify(obj);
+    wsClient.send(json);
+  }
 
   delay(100);
 }
