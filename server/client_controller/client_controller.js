@@ -29,6 +29,7 @@ app.use(cors());
 
 
 const clients = {};
+var frontend = null;
 
 function clientsLog(text) {
   console.log('[clients] ' + text);
@@ -60,15 +61,36 @@ clientsWsServer.on('request', function(request) {
   connection.sendUTF("{ \"command\": \"text\", \"text\":\"" + userID + "\", \"x\": 10, \"y\": 10 }")
 
   connection.on('message', function(message) {
-    clientsLog("message: " + message.utf8Data);
+    clientsLog("[" + userID + "] " + "message: " + message.utf8Data);
+
+    if(frontend != null) {
+      const focus = JSON.parse(message.utf8Data)["focus"];
+      const json = { id: Number(userID), focus: focus }
+      frontend.sendUTF(JSON.stringify(json));
+    }
+  });
+
+  connection.on('close', function(reasonCode, description) {
+    clientsLog("[" + userID + "] " + "close: " + description + " (" + reasonCode + ")");
+    //delete clients[userID];
   });
 
   clientsWsServer.on('close', function(connection) {
     clientsLog((new Date()) + " Peer " + userID + " disconnected.");
-    delete clients[userID];
+    //delete clients[userID];
   });
 });
 
+frontendWsServer.on('request', function(request) {
+  const connection = request.accept(null, request.origin);
+  frontend = connection;
+  frontendLog((new Date()) + ' Recieved a new connection from origin ' + request.origin + '.');
+  
+  frontendWsServer.on('close', function(connection) {
+    frontendLog((new Date()) + " Frontend disconnected.");
+    frontend = null;
+  });
+});
 
 
 // ENDPOINTS ----------------------------------------  
@@ -76,11 +98,11 @@ clientsWsServer.on('request', function(request) {
 app.post('/send/image', function(req, res) {
   var ID = req.query.ID;
   var pngUrl = req.query.pngUrl;
-  var x = req.query.x;
-  var y = req.query.y;
+  var x = Number(req.query.x);
+  var y = Number(req.query.y);
 
   const json = { command:"pngUrl", url:pngUrl, x:x, y:y };
-  console.log(json);
+  console.log("[image] [" + ID + "] " + JSON.stringify(json));
 
   clients[ID].sendUTF(JSON.stringify(json));
   
@@ -94,7 +116,7 @@ app.post('/send/text', function(req, res) {
   var y = Number(req.query.y);
 
   const json = { command:"text", text:text, x:x, y:y };
-  console.log(json);
+  console.log("[text] [" + ID + "] " + JSON.stringify(json));
 
   clients[ID].sendUTF(JSON.stringify(json));
   
