@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
+import { w3cwebsocket as W3CWebSocket } from "websocket";
 
-//const ws = new WebSocket('ws://127.0.0.1:8000');
+//const ws = new WebSocket('ws://192.168.0.14:8001');
 //console.log('hello');
+const client = new W3CWebSocket('ws://192.168.0.14:8001');
 
 class Stack extends Component {
   constructor(props) {
@@ -30,6 +32,8 @@ class Stack extends Component {
         'Content-Type': 'application/json',
       }
     });
+
+    this.props.updateUrlState(this.props.index, this.state.url);
   }
 
   render() {
@@ -76,6 +80,8 @@ class Group extends Component {
           'Content-Type': 'application/json',
         }
       });
+
+      this.props.updateUrlState(element, url);
     });
   }
 
@@ -98,20 +104,44 @@ class Group extends Component {
   }
 }
 
+class Active extends Component {
+  render() {
+    return (
+      <div className="active">
+        <img src={this.props.activeImageUrl} height="240" width="240"></img>
+      </div>
+    )
+  }
+}
+
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = { 
       clientList: [],
+      urlState: Array(8).fill(null),
+      activeImageUrl: "",
     };
+
+    this.updateUrlState = this.updateUrlState.bind(this);
+  }
+
+  updateUrlState(i, url) {
+    var updateUrlState = this.state.urlState;
+    updateUrlState[i] = url;
+    this.setState({ urlState: updateUrlState });
   }
 
   renderStack(i) {
-    return < Stack index={i} />
+    return < Stack index={i} updateUrlState={this.updateUrlState}/>
   }
 
   renderGroup(name, clientList) {
-    return < Group name={name} clientList={clientList} />
+    return < Group name={name} clientList={clientList} updateUrlState={this.updateUrlState}/>
+  }
+
+  renderActive() {
+    return <Active activeImageUrl={this.state.activeImageUrl}> </Active>
   }
 
   getClientList() {
@@ -122,6 +152,25 @@ class App extends Component {
 
   componentWillMount() {
     this.getClientList();
+
+    client.onopen = () => {
+      console.log("WS connected.")
+    }
+
+    client.onmessage = (message) => {
+      console.log(message);
+
+      var jsonMessage = JSON.parse(message.data);
+      console.log(jsonMessage);
+
+      if(jsonMessage["focus"]) {
+        const url = this.state.urlState[jsonMessage["id"]];
+        this.setState({ activeImageUrl: url });
+      } else {
+        this.setState({ activeImageUrl: null });
+      }
+
+    }
   }
   
   render() {
@@ -129,10 +178,12 @@ class App extends Component {
     this.state.clientList.forEach(element => stacks.push(this.renderStack(element)));
 
     var groups = [this.renderGroup("test", this.state.clientList)];
+    var active = this.renderActive();
 
     return (
       <div className="App">
         <h1>client_controller</h1>
+        <p>{active}</p>
         <p>{stacks}</p>
 
         <h2>group_send</h2>
