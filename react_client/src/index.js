@@ -41,8 +41,8 @@ class Stack extends Component {
       <div className="stack">
         <form onSubmit={this.onSubmit}>
           <label>
-            {this.props.index} : PNG URL  
-              <input type="text" name="url" onChange={this.onChange} size="80"/>
+            {this.props.index} : PNG URL
+              <input type="text" name="url" onChange={this.onChange} size="80" />
           </label>
           <input type="submit" value="Submit" />
         </form>
@@ -66,7 +66,7 @@ class Group extends Component {
     var imageList = this.state.request.response.split("\n");
 
     this.props.clientList.forEach(element => {
-      var index = Math.floor(Math.random() * (imageList.length-1));
+      var index = Math.floor(Math.random() * (imageList.length - 1));
       var url = imageList[index];
       imageList.splice(index, 1);
 
@@ -104,20 +104,17 @@ class Group extends Component {
   }
 }
 
-class Active extends Component {
-  render() {
-    return (
-      <div className="active">
-        <img src={this.props.activeImageUrl} height="240" width="240"></img>
-      </div>
-    )
-  }
-}
+const Active = ({ activeImageUrl }) => (
+  <div className="active" style={{ ...!activeImageUrl && { opacity: 0 } }}>
+    <img src={activeImageUrl} height="240" width="240"></img>
+  </div>
+);
+
 
 class App extends Component {
   constructor(props) {
     super(props);
-    this.state = { 
+    this.state = {
       clientList: [],
       urlState: Array(8).fill(null),
       activeImageUrl: "",
@@ -133,11 +130,11 @@ class App extends Component {
   }
 
   renderStack(i) {
-    return < Stack index={i} updateUrlState={this.updateUrlState}/>
+    return <Stack index={i} updateUrlState={this.updateUrlState} />;
   }
 
   renderGroup(name, clientList) {
-    return < Group name={name} clientList={clientList} updateUrlState={this.updateUrlState}/>
+    return <Group name={name} clientList={clientList} updateUrlState={this.updateUrlState} />;
   }
 
   renderActive() {
@@ -163,7 +160,7 @@ class App extends Component {
       var jsonMessage = JSON.parse(message.data);
       console.log(jsonMessage);
 
-      if(jsonMessage["focus"]) {
+      if (jsonMessage["focus"]) {
         const url = this.state.urlState[jsonMessage["id"]];
         this.setState({ activeImageUrl: url });
       } else {
@@ -172,9 +169,9 @@ class App extends Component {
 
     }
   }
-  
+
   render() {
-    var stacks=[];
+    var stacks = [];
     this.state.clientList.forEach(element => stacks.push(this.renderStack(element)));
 
     var groups = [this.renderGroup("test", this.state.clientList)];
