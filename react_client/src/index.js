@@ -63,11 +63,11 @@ class Group extends Component {
   }
 
   handleLoad(e) {
-    var imageList = this.state.request.response.split("\n");
+    const imageList = this.state.request.response.split("\n");
 
     this.props.clientList.forEach(element => {
-      var index = Math.floor(Math.random() * (imageList.length - 1));
-      var url = imageList[index];
+      const index = Math.floor(Math.random() * (imageList.length - 1));
+      const url = imageList[index];
       imageList.splice(index, 1);
 
       console.log(element + ": " + url);
@@ -86,10 +86,9 @@ class Group extends Component {
   }
 
   onButtonClick() {
-    var result = null;
-    var xmlhttp = new XMLHttpRequest();
+    const xmlhttp = new XMLHttpRequest();
     xmlhttp.addEventListener('load', this.handleLoad);
-    xmlhttp.open("GET", "http://192.168.0.14:5001/" + this.props.name + "/manifest.txt", true)
+    xmlhttp.open("GET", "http://192.168.0.14:5001/" + this.props.name + "/manifest.txt", true);
     xmlhttp.send();
 
     this.setState({ request: xmlhttp });
@@ -124,7 +123,7 @@ class App extends Component {
   }
 
   updateUrlState(i, url) {
-    var updateUrlState = this.state.urlState;
+    const updateUrlState = this.state.urlState;
     updateUrlState[i] = url;
     this.setState({ urlState: updateUrlState });
   }
@@ -157,7 +156,7 @@ class App extends Component {
     client.onmessage = (message) => {
       console.log(message);
 
-      var jsonMessage = JSON.parse(message.data);
+      const jsonMessage = JSON.parse(message.data);
       console.log(jsonMessage);
 
       if (jsonMessage["focus"]) {
@@ -171,11 +170,11 @@ class App extends Component {
   }
 
   render() {
-    var stacks = [];
+    const stacks = [];
     this.state.clientList.forEach(element => stacks.push(this.renderStack(element)));
 
-    var groups = [this.renderGroup("test", this.state.clientList)];
-    var active = this.renderActive();
+    const groups = [this.renderGroup("test", this.state.clientList)];
+    const active = this.renderActive();
 
     return (
       <div className="App">
