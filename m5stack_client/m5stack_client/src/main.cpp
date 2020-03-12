@@ -6,8 +6,12 @@
 #include <secrets.h>
 #include <ArduinoWebsockets.h>
 #include "utility/MPU6886.h"
+#include <esp_wifi.h>
 
-#define HOST "ws://192.168.0.14:8000"
+#define HOST "ws://18.218.200.149:8000"
+// uint8_t customMac[] = {0xc0, 0xee, 0xfb, 0xd0, 0xe1, 0x02}; //OnePlus
+uint8_t customMac[] = {0x54, 0x99, 0x63, 0xF0, 0x2C, 0x4B}; //iPhone
+// uint8_t customMac[] = {0xf0, 0x18, 0x98, 0x2c, 0xa4, 0xf2}; //MacBook Pro
 
 // Accelerometer
 float accX = 0;
@@ -54,6 +58,9 @@ void onEvent(WebsocketsEvent event, String data) {
         Serial.println("Connnection Opened");
     } else if(event == WebsocketsEvent::ConnectionClosed) {
         Serial.println("Connnection Closed");
+        wsClient.connect(HOST);
+        wsClient.ping();
+        //wsClient.send("hello");
     } else if(event == WebsocketsEvent::GotPing) {
         Serial.println("Got a Ping!");
     } else if(event == WebsocketsEvent::GotPong) {
@@ -69,6 +76,10 @@ void setup() {
 
     Serial.print("\nConnecting: ");
     Serial.println(WIFI_SSID);
+
+    WiFi.mode(WIFI_AP);
+    esp_wifi_set_mac(ESP_IF_WIFI_AP, &customMac[0]);
+
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     while(WiFi.status() != WL_CONNECTED) {
@@ -89,7 +100,6 @@ void setup() {
 
     Serial.print("[wsClient] Connected to: ");
     Serial.println(HOST);
-    wsClient.send("hello");
 
     // MPU6886
     mpu.Init();

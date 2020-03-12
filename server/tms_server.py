@@ -8,7 +8,7 @@ from PIL import Image
 import os
 import re
 from random import seed
-from random import randint 
+from random import randint
 seed(1)
 
 # FLASK CONFIG
@@ -30,7 +30,7 @@ def playback_state_image_url():
     filename = wget.download(image_url, os.getcwd() + "/download")
 
     im = Image.open(filename)
-    new_im = im.resize((160, 160))
+    new_im = im.resize((240, 240))
     new_filename = os.getcwd() + "/png/" + str(randint(1, 99999)) + ".png"
     new_im.save(new_filename)
 
