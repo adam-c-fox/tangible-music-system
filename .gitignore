@@ -3,4 +3,8 @@ secrets.h
 .vscode
 .DS_STORE
 server/png/
+server/images
 server/.cache-adamfox26
+.gitignore
+*.code-workspace
+*.swp
