@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
 export default class Group extends Component {
   constructor(props) {
@@ -11,10 +12,22 @@ export default class Group extends Component {
     this.handleLoad = this.handleLoad.bind(this);
   }
 
-  handleLoad(e) {
-    const imageList = this.state.request.response.split('\n');
+  onButtonClick() {
+    const { name } = this.props;
+    const xmlhttp = new XMLHttpRequest();
+    xmlhttp.addEventListener('load', this.handleLoad);
+    xmlhttp.open('GET', `http://192.168.0.14:5001/${name}/manifest.txt`, true);
+    xmlhttp.send();
 
-    this.props.clientList.forEach((element) => {
+    this.setState({ request: xmlhttp });
+  }
+
+  handleLoad() {
+    const { request } = this.state;
+    const { clientList, updateUrlState } = this.props;
+    const imageList = request.response.split('\n');
+
+    clientList.forEach((element) => {
       const index = Math.floor(Math.random() * (imageList.length - 1));
       const url = imageList[index];
       imageList.splice(index, 1);
@@ -30,24 +43,23 @@ export default class Group extends Component {
         },
       });
 
-      this.props.updateUrlState(element, url);
+      updateUrlState(element, url);
     });
   }
 
-  onButtonClick() {
-    const xmlhttp = new XMLHttpRequest();
-    xmlhttp.addEventListener('load', this.handleLoad);
-    xmlhttp.open('GET', `http://192.168.0.14:5001/${this.props.name}/manifest.txt`, true);
-    xmlhttp.send();
-
-    this.setState({ request: xmlhttp });
-  }
-
   render() {
+    const { name } = this.props;
+
     return (
       <div className="group">
-        <button onClick={this.onButtonClick}>{this.props.name}</button>
+        <button type="button" onClick={this.onButtonClick}>{name}</button>
       </div>
     );
   }
 }
+
+Group.propTypes = {
+  name: PropTypes.string.isRequired,
+  updateUrlState: PropTypes.func.isRequired,
+  clientList: PropTypes.arrayOf(PropTypes.number).isRequired,
+};

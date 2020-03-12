@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 const Active = ({ activeImageUrl }) => (
   <div className="active" style={{ ...!activeImageUrl && { opacity: 0 } }}>
@@ -6,3 +7,7 @@ const Active = ({ activeImageUrl }) => (
   </div>
 );
 export default Active;
+
+Active.propTypes = {
+  activeImageUrl: PropTypes.string.isRequired,
+};

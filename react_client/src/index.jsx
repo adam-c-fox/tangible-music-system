@@ -5,10 +5,7 @@ import Active from './Active';
 import Group from './Group';
 import Stack from './Stack';
 
-// const ws = new WebSocket('ws://192.168.0.14:8001');
-// console.log('hello');
 export const client = new W3CWebSocket('ws://192.168.0.14:8001');
-
 
 class App extends Component {
   constructor(props) {
@@ -22,31 +19,7 @@ class App extends Component {
     this.updateUrlState = this.updateUrlState.bind(this);
   }
 
-  updateUrlState(i, url) {
-    const updateUrlState = this.state.urlState;
-    updateUrlState[i] = url;
-    this.setState({ urlState: updateUrlState });
-  }
-
-  renderStack(i) {
-    return <Stack index={i} updateUrlState={this.updateUrlState} />;
-  }
-
-  renderGroup(name, clientList) {
-    return <Group name={name} clientList={clientList} updateUrlState={this.updateUrlState} />;
-  }
-
-  renderActive() {
-    return <Active activeImageUrl={this.state.activeImageUrl}> </Active>;
-  }
-
-  getClientList() {
-    fetch('http://127.0.0.1:8002/client/list')
-      .then((res) => res.json())
-      .then((res) => this.setState({ clientList: res }));
-  }
-
-  componentWillMount() {
+  componentDidMount() {
     this.getClientList();
 
     client.onopen = () => {
@@ -59,8 +32,9 @@ class App extends Component {
       const jsonMessage = JSON.parse(message.data);
       console.log(jsonMessage);
 
+      const { urlState } = this.state;
       if (jsonMessage.focus) {
-        const url = this.state.urlState[jsonMessage.id];
+        const url = urlState[jsonMessage.id];
         this.setState({ activeImageUrl: url });
       } else {
         this.setState({ activeImageUrl: null });
@@ -68,11 +42,37 @@ class App extends Component {
     };
   }
 
+  getClientList() {
+    fetch('http://127.0.0.1:8002/client/list')
+      .then((res) => res.json())
+      .then((res) => this.setState({ clientList: res }));
+  }
+
+  updateUrlState(i, url) {
+    const { updateUrlState } = this.state;
+    updateUrlState[i] = url;
+    this.setState({ urlState: updateUrlState });
+  }
+
+  renderGroup(name, clientList) {
+    return <Group name={name} clientList={clientList} updateUrlState={this.updateUrlState} />;
+  }
+
+  renderActive() {
+    const { activeImageUrl } = this.state;
+    return <Active activeImageUrl={activeImageUrl}> </Active>;
+  }
+
+  renderStack(i) {
+    return <Stack index={i} updateUrlState={this.updateUrlState} />;
+  }
+
   render() {
     const stacks = [];
-    this.state.clientList.forEach((element) => stacks.push(this.renderStack(element)));
+    const { clientList } = this.state;
+    clientList.forEach((element) => stacks.push(this.renderStack(element)));
 
-    const groups = [this.renderGroup('test', this.state.clientList)];
+    const groups = [this.renderGroup('test', clientList)];
     const active = this.renderActive();
 
     return (
@@ -94,24 +94,3 @@ ReactDOM.render(
   <App />,
   document.getElementById('root'),
 );
-
-
-// componentDidMount() {
-//   ws.onopen = () => {
-//     console.log("connected");
-//   }
-
-//   //client.onmessage = (message) => {
-//   //  const dataFromServer = JSON.parse(message.data);
-//   //  const stateToChange = {};
-
-//   //  if (dataFromServer.type === "userevent") {
-//   //    stateToChange.currentUsers = Object.values(dataFromServer.data.users);
-//   //  } else if (dataFromServer.type === "contentchange") {
-//   //    stateToChange.text = dataFromServer.data.editorContent || contentDefaultMessage;
-//   //  }
-
-//   //  stateToChange.userActivity = dataFromServer.data.userActivity;
-//   //  this.set
-//   //}
-// }

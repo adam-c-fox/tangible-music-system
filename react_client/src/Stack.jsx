@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
 export default class Stack extends Component {
   constructor(props) {
@@ -50,3 +51,8 @@ export default class Stack extends Component {
     );
   }
 }
+
+Stack.propTypes = {
+  index: PropTypes.number.isRequired,
+  updateUrlState: PropTypes.func.isRequired,
+};
