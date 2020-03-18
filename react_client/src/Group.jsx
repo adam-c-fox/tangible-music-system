@@ -16,7 +16,7 @@ export default class Group extends Component {
     const { name } = this.props;
     const xmlhttp = new XMLHttpRequest();
     xmlhttp.addEventListener('load', this.handleLoad);
-    xmlhttp.open('GET', `http://192.168.0.14:5001/${name}/manifest.txt`, true);
+    xmlhttp.open('GET', `http://192.168.0.14:5001/images/${name}/manifest.txt`, true);
     xmlhttp.send();
 
     this.setState({ request: xmlhttp });
@@ -34,7 +34,7 @@ export default class Group extends Component {
 
       console.log(`${element}: ${url}`);
 
-      const bodyString = `ID=${element}&pngUrl=${url}&x=30&y=30`;
+      const bodyString = `ID=${element}&pngUrl=${url}&x=40&y=0`;
       fetch(`http://127.0.0.1:8002/send/image?${bodyString}`, {
         method: 'POST',
         headers: {

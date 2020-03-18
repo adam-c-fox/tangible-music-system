@@ -5,7 +5,8 @@ import Active from './Active';
 import Group from './Group';
 import Stack from './Stack';
 
-export const client = new W3CWebSocket('ws://192.168.0.14:8001');
+export const host = 'localhost';
+export const client = new W3CWebSocket(`ws://${host}:8001`);
 
 class App extends Component {
   constructor(props) {
@@ -43,15 +44,15 @@ class App extends Component {
   }
 
   getClientList() {
-    fetch('http://127.0.0.1:8002/client/list')
+    fetch(`http://${host}:8002/client/list`)
       .then((res) => res.json())
       .then((res) => this.setState({ clientList: res }));
   }
 
   updateUrlState(i, url) {
-    const { updateUrlState } = this.state;
-    updateUrlState[i] = url;
-    this.setState({ urlState: updateUrlState });
+    const state = this.state.urlState;
+    state[i] = url;
+    this.setState({ urlState: state });
   }
 
   renderGroup(name, clientList) {
@@ -72,7 +73,11 @@ class App extends Component {
     const { clientList } = this.state;
     clientList.forEach((element) => stacks.push(this.renderStack(element)));
 
-    const groups = [this.renderGroup('test', clientList)];
+    const groups = [
+      this.renderGroup('80s', clientList),
+      this.renderGroup('prog_rock', clientList),
+      this.renderGroup('top_songs_2019', clientList),
+    ];
     const active = this.renderActive();
 
     return (

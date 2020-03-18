@@ -22,7 +22,7 @@ export default class Stack extends Component {
     const { index, updateUrlState } = this.props;
     const { url } = this.state;
 
-    const bodyString = `ID=${index}&pngUrl=${url}&x=30&y=30`;
+    const bodyString = `ID=${index}&pngUrl=${url}&x=40&y=0`;
     fetch(`http://127.0.0.1:8002/send/image?${bodyString}`, {
       method: 'POST',
       headers: {
