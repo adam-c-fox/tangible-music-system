@@ -28,7 +28,8 @@ app.use(express.json());
 app.use(cors());
 
 
-const clients = {};
+let clientCount = 0;
+const connections = {};
 var frontend = null;
 
 function clientsLog(text) {
@@ -40,10 +41,10 @@ function frontendLog(text) {
 }
 
 const getUniqueID = () => {
-  //const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-  //return s4() + s4() + '-' + s4();
+  const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+  return s4() + s4() + '-' + s4();
 
-  return Object.keys(clients).length;
+  // return Object.keys(clients).length;
 };
 
 
@@ -51,36 +52,60 @@ const getUniqueID = () => {
 // WEBSOCKETS ----------------------------------------  
 
 clientsWsServer.on('request', function(request) {
-  var userID = getUniqueID();
+  var connectionID = getUniqueID();
   clientsLog(`${new Date()} Received a new connection from origin ${request.origin}.`);
   const connection = request.accept(null, request.origin);
-  clients[userID] = connection;
-  clientsLog(`connected: ${userID} in ${Object.getOwnPropertyNames(clients)}`);
+  connections[connectionID] = connection;
+  clientsLog(`connected: ${connectionID} in ${Object.getOwnPropertyNames(connections)}`);
 
+  /*
   // Pass userID to device 
   const json = { command:"id", userID:Number(userID) };
   connection.sendUTF(JSON.stringify(json));
   
   // Display ID on LCD
   connection.sendUTF(`{ \"command\": \"text\", \"text\":\"${userID}\", \"x\": 10, \"y\": 10 }`)
+  */
 
   connection.on('message', function(message) {
-    clientsLog(`[${userID}] message: ${message.utf8Data}`);
+    clientsLog(`[${connectionID}] message: ${message.utf8Data}`);
     const msgContents = JSON.parse(message.utf8Data);
 
+    // Handle userID requests
+    if(msgContents.hasOwnProperty('userID')) {
+      if(msgContents['userID'] == -1) {
+        // Client requests a userID
+        //const userID = Object.keys(clients).length;
+        const userID = clientCount;
+        clientCount = clientCount + 1;
+
+        console.log("userID: %d", userID);
+        //clients[userID] = connection;
+
+        connection.sendUTF(JSON.stringify({ command: 'id', userID: userID }));
+        connection.sendUTF(`{ \"command\": \"text\", \"text\":\"${userID}\", \"x\": 10, \"y\": 10 }`)
+      } else {
+        // Client already has a userID
+        //clients[msgContents['userID']+10] = connection;
+      }
+
+      return;
+    }
+
+    // Send to frontend
     if(frontend != null) {
-      const json = { id: Number(userID), focus: msgContents['focus']}
-      frontend.sendUTF(JSON.stringify(json));
+      // const json = { id: Number(userID), focus: msgContents['focus']}
+      // frontend.sendUTF(JSON.stringify(json));
     }
   });
 
   connection.on('close', function(reasonCode, description) {
-    clientsLog(`[${userID}] close: ${description} (${reasonCode})`);
+    clientsLog(`[${connectionID}] close: ${description} (${reasonCode})`);
     //delete clients[userID];
   });
 
   clientsWsServer.on('close', function(connection) {
-    clientsLog(`${new Date()} Peer ${userID} disconnected.`);
+    clientsLog(`${new Date()} Peer ${connectionID} disconnected.`);
     //delete clients[userID];
   });
 });
@@ -128,7 +153,8 @@ app.post('/send/text', function(req, res) {
 });
 
 app.get('/client/list', function(req, res) {
-  res.json(Object.keys(clients));
+  //res.json(Object.keys(clients));
+  res.json(Object.keys(connections));
 });
 
 app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
