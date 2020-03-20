@@ -27,7 +27,19 @@ app.get('/', (req, res) => res.send(as))
 app.use(express.json());
 app.use(cors());
 
+// Spotify
+const spotify = require('spotify-web-api-node');
+const spotifyApi = new spotify({
+  clientId: '52e914108f7c4726aa4e02fb8923ae41',
+  clientSecret: '65de00e35a4341e3965c9224340a0f68',
+  redirectUri: 'http://192.168.0.14:8002/spotify/callback'
+})
+const scopes = ['app-remote-control', 'streaming'];
+const state = "";
+const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
+let spotifyAuthCode = "";
 
+// Business logic
 const clients = {};
 var frontend = null;
 
@@ -97,7 +109,7 @@ frontendWsServer.on('request', function(request) {
 });
 
 
-// ENDPOINTS ----------------------------------------  
+// CONTROL ENDPOINTS ----------------------------------------  
 
 app.post('/send/image', function(req, res) {
   var ID = req.query.ID;
@@ -129,6 +141,57 @@ app.post('/send/text', function(req, res) {
 
 app.get('/client/list', function(req, res) {
   res.json(Object.keys(clients));
+});
+
+
+// SPOTIFY ENDPOINTS ----------------------------------------  
+
+function spotifyPause() {
+  spotifyApi.pause()
+    .then(function(data) { console.log("[spotify] pause"); })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+};
+
+function spotifyPlay() {
+  spotifyApi.play()
+    .then(function(data) { console.log("[spotify] play"); })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+};
+
+app.post('/spotify/control', function(req, res) {
+  const command = req.query.command;
+
+  if(command == 'pause') {
+    spotifyPause();
+  } else if (command == 'play') {
+    spotifyPlay();
+  } else {
+    res.status(404).send(`Command '${command}' not found`);
+  }
+
+  res.status(200).send();
+});
+
+app.get('/spotify/callback', function(req, res) {
+  // Auth code result  
+  spotifyAuthCode = req.query.code;
+  res.status(200).send("Auth code set.");
+
+  spotifyApi.authorizationCodeGrant(spotifyAuthCode)
+    .then(function(data) {
+      console.log("access_token", data.body['access_token']);
+      console.log("refresh_token", data.body['refresh_token']);
+
+      spotifyApi.setAccessToken(data.body['access_token']);
+      spotifyApi.setRefreshToken(data.body['refresh_token']);
+    })
+    .catch(function(err) {
+      console.log("[spotify] Something went wrong...", err)
+    });
+});
+
+app.get('/spotify/authorise', function(req, res) {
+  res.status(200).redirect(authorizeURL);
 });
 
 app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
