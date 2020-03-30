@@ -16,7 +16,7 @@ export default class Group extends Component {
     const { name } = this.props;
     const xmlhttp = new XMLHttpRequest();
     xmlhttp.addEventListener('load', this.handleLoad);
-    xmlhttp.open('GET', `http://192.168.0.14:5001/images/${name}/manifest.txt`, true);
+    xmlhttp.open('GET', `http://192.168.1.33:5001/images/${name}/manifest.txt`, true);
     xmlhttp.send();
 
     this.setState({ request: xmlhttp });
@@ -24,27 +24,10 @@ export default class Group extends Component {
 
   handleLoad() {
     const { request } = this.state;
-    const { clientList, updateUrlState } = this.props;
+    const { sendToStacks } = this.props;
+
     const imageList = request.response.split('\n');
-
-    clientList.forEach((element) => {
-      const index = Math.floor(Math.random() * (imageList.length - 1));
-      const url = imageList[index];
-      imageList.splice(index, 1);
-
-      console.log(`${element}: ${url}`);
-
-      const bodyString = `ID=${element}&pngUrl=${url}&x=40&y=0`;
-      fetch(`http://127.0.0.1:8002/send/image?${bodyString}`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-
-      updateUrlState(element, url);
-    });
+    sendToStacks(imageList);
   }
 
   render() {
@@ -60,6 +43,5 @@ export default class Group extends Component {
 
 Group.propTypes = {
   name: PropTypes.string.isRequired,
-  updateUrlState: PropTypes.func.isRequired,
-  clientList: PropTypes.arrayOf(PropTypes.number).isRequired,
+  sendToStacks: PropTypes.func.isRequired,
 };
