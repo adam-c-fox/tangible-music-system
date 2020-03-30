@@ -32,12 +32,18 @@ const spotify = require('spotify-web-api-node');
 const spotifyApi = new spotify({
   clientId: '52e914108f7c4726aa4e02fb8923ae41',
   clientSecret: '65de00e35a4341e3965c9224340a0f68',
-  redirectUri: 'http://192.168.0.14:8002/spotify/callback'
+  //redirectUri: 'http://192.168.0.14:8002/spotify/callback'
+  redirectUri: 'http://localhost:8002/spotify/callback'
 })
-const scopes = ['app-remote-control', 'streaming'];
+const scopes = ['app-remote-control', 'streaming', 'user-top-read'];
 const state = "";
 const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
 let spotifyAuthCode = "";
+
+// Utils
+const sharp = require("sharp");
+const fs = require('fs');
+const request = require('request');
 
 // Business logic
 const clients = {};
@@ -158,6 +164,15 @@ function spotifyPlay() {
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 };
 
+app.get('/spotify/top-tracks', function(req, res) {
+  spotifyApi.getMyTopTracks()
+    .then(function(data) { 
+      console.log("[spotify] top tracks") 
+      res.status(200).json(data.body.items);
+    })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+});
+
 app.post('/spotify/control', function(req, res) {
   const command = req.query.command;
 
@@ -192,6 +207,50 @@ app.get('/spotify/callback', function(req, res) {
 
 app.get('/spotify/authorise', function(req, res) {
   res.status(200).redirect(authorizeURL);
+});
+
+
+// UTILS ----------------------------------------  
+
+function convert(srcFilepath, destFilepath) {
+  sharp(srcFilepath)
+    .resize(240, 240)
+    .rotate(90)
+    .png()
+    .toFile(destFilepath, (err, info) => {
+      //console.log(err);
+      //console.log(info);
+    });
+}
+
+async function wait(srcFilepath, destFilepath) {
+  await sleep(300);
+  convert(srcFilepath, destFilepath); 
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}   
+
+app.post('/convert/jpeg-to-png', function(req, res) {
+  let jpegUrl = req.query.jpegUrl;
+  const filename = jpegUrl.substr(jpegUrl.lastIndexOf('/') + 1);
+  const srcFilepath =  './images/download/' + filename + ".jpeg";
+  const destFilepath = './images/png/' + filename + ".png";
+
+  // TODO: cache, check against already downloaded files
+
+  // https -> http
+  jpegUrl = jpegUrl.replace(/^https:\/\//i, 'http://');
+
+  // Retrieve image, pass to conversion
+  request(jpegUrl).pipe(fs.createWriteStream(srcFilepath)).on('close', () => wait(srcFilepath, destFilepath));
+
+  // TODO: return url to png image
+ 
+  res.status(200).send();
 });
 
 app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
