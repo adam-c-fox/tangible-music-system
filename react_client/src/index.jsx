@@ -151,14 +151,20 @@ class App extends Component {
     return (
       <div className="App">
         <h1>client_controller</h1>
-        <p>{active}</p>
-        <p>{stacks}</p>
 
-        <h2>group_send</h2>
-        <p>{groups}</p>
+        <div style={{ height: 240, width: 240, margin: '20px' }}>
+          {active}
+        </div>
 
-        <h2>spotify</h2>
-        <p>{spotify}</p>
+        <div style={{ margin: '20px' }}>
+          {stacks}
+
+          <h2>group_send</h2>
+          <p>{groups}</p>
+
+          <h2>spotify</h2>
+          <p>{spotify}</p>
+        </div>
       </div>
     );
   }
