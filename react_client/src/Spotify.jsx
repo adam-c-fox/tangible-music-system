@@ -15,9 +15,11 @@ export default class Spotify extends Component {
   }
 
   topTracksOnClick() {
+    const { sendToStacks } = this.props;
+
     fetch(`http://${host}:8002/spotify/top-tracks`)
       .then((res) => res.json())
-      .then((res) => this.sendTopTracks(res));
+      .then((res) => sendToStacks(res));
   }
 
   sendTopTracks(tracks) {
