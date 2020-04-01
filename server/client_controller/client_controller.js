@@ -80,7 +80,7 @@ clientsWsServer.on('request', function(request) {
   connection.sendUTF(JSON.stringify(json));
   
   // Display ID on LCD
-  connection.sendUTF(`{ \"command\": \"text\", \"text\":\"${userID}\", \"x\": 10, \"y\": 10 }`)
+  connection.sendUTF(`{ \"command\": \"text\", \"text\":\"${userID}\", \"x\": 220, \"y\": 300 }`)
 
   connection.on('message', function(message) {
     clientsLog(`[${userID}] message: ${message.utf8Data}`);
@@ -115,7 +115,7 @@ frontendWsServer.on('request', function(request) {
 });
 
 
-// CONTROL ENDPOINTS ----------------------------------------  
+// STACK CONTROL ENDPOINTS ----------------------------------------  
 
 app.post('/send/image', function(req, res) {
   var ID = req.query.ID;
@@ -142,6 +142,17 @@ app.post('/send/text', function(req, res) {
 
   clients[ID].sendUTF(JSON.stringify(json));
   
+  res.status(200).send();
+});
+
+app.post('/send/clear', function(req, res) {
+  var ID = req.query.ID;
+
+  const json = { command:"clear" };
+  console.log(`[clear] [${ID}]`);
+
+  clients[ID].sendUTF(JSON.stringify(json));
+
   res.status(200).send();
 });
 
@@ -215,7 +226,6 @@ app.get('/spotify/authorise', function(req, res) {
 function convert(srcFilepath, destFilepath) {
   sharp(srcFilepath)
     .resize(240, 240)
-    .rotate(90)
     .png()
     .toFile(destFilepath, (err, info) => {
       //console.log(err);
@@ -248,9 +258,10 @@ app.post('/convert/jpeg-to-png', function(req, res) {
   // Retrieve image, pass to conversion
   request(jpegUrl).pipe(fs.createWriteStream(srcFilepath)).on('close', () => wait(srcFilepath, destFilepath));
 
-  // TODO: return url to png image
+  // TODO: migrate to global host ip
+  const returnUrl = `http://192.168.1.33:5001/client_controller/images/png/${filename}.png`;
  
-  res.status(200).send();
+  res.status(200).json(returnUrl);
 });
 
 app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
