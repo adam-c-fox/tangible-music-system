@@ -17,7 +17,6 @@ class App extends Component {
       clientList: [],
       clientState: Array(8).fill(null),
       activeImageUrl: '',
-      activePreviewUrl: '',
       clientNfcValues: Array(8).fill(0),
       clientNfcToUpdate: -1,
     };
@@ -45,22 +44,22 @@ class App extends Component {
         if (jsonMessage.focus) {
           const spotifyPayload = clientState[jsonMessage.id];
           this.setState({
-            activeImageUrl: spotifyPayload.album.images[0].url,
-            activePreviewUrl: spotifyPayload.preview_url,
+            activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '',
           });
 
-          if (this.previewPlayer == null) {
+          if (this.previewPlayer == null && spotifyPayload != null) {
             this.previewPlayer = new Audio(spotifyPayload.preview_url);
             this.previewPlayer.play();
           }
         } else {
           this.setState({
             activeImageUrl: null,
-            activePreviewUrl: null,
           });
 
-          this.previewPlayer.pause();
-          this.previewPlayer = null;
+          if (this.previewPlayer != null) {
+            this.previewPlayer.pause();
+            this.previewPlayer = null;
+          }
         }
       } else if ('nfc' in jsonMessage) {
         console.log(jsonMessage.nfc);
@@ -158,7 +157,7 @@ class App extends Component {
   updateClientState(i, stateObj) {
     const { clientState } = this.state;
     clientState[i] = stateObj;
-    this.setState({ clientState: clientState });
+    this.setState({ clientState });
   }
 
   updateNfcValue(input) {
@@ -170,7 +169,7 @@ class App extends Component {
     }
   }
 
-  renderGroup(name, clientList) {
+  renderGroup(name) {
     return <Group name={name} sendToStacks={this.sendImagesToStacks} />;
   }
 
@@ -180,7 +179,6 @@ class App extends Component {
   }
 
   renderStack(i) {
-    const { clientNfcValues } = this.state;
     return <Stack index={i} updateUrlState={this.updateUrlState} setNfcClientToUpdate={this.setNfcClientToUpdate} />;
   }
 
@@ -190,7 +188,7 @@ class App extends Component {
 
   render() {
     const stacks = [];
-    const { clientList, activePreviewUrl } = this.state;
+    const { clientList } = this.state;
     clientList.forEach((element) => stacks.push(this.renderStack(element)));
 
     const groups = [
