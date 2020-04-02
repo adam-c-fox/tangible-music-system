@@ -17,10 +17,14 @@ class App extends Component {
       clientList: [],
       clientState: Array(8).fill(null),
       activeImageUrl: '',
+      activePreviewUrl: '',
+      clientNfcValues: Array(8).fill(0),
+      clientNfcToUpdate: -1,
     };
 
     this.updateClientState = this.updateClientState.bind(this);
     this.sendTracksToStacks = this.sendTracksToStacks.bind(this);
+    this.setNfcClientToUpdate = this.setNfcClientToUpdate.bind(this);
   }
 
   componentDidMount() {
@@ -37,13 +41,52 @@ class App extends Component {
       console.log(jsonMessage);
 
       const { clientState } = this.state;
-      if (jsonMessage.focus) {
-        const spotifyPayload = clientState[jsonMessage.id];
-        this.setState({ activeImageUrl: spotifyPayload.album.images[0].url });
-      } else {
-        this.setState({ activeImageUrl: null });
+      if ('focus' in jsonMessage) {
+        if (jsonMessage.focus) {
+          const spotifyPayload = clientState[jsonMessage.id];
+          this.setState({
+            activeImageUrl: spotifyPayload.album.images[0].url,
+            activePreviewUrl: spotifyPayload.preview_url,
+          });
+
+          if (this.previewPlayer == null) {
+            this.previewPlayer = new Audio(spotifyPayload.preview_url);
+            this.previewPlayer.play();
+          }
+        } else {
+          this.setState({
+            activeImageUrl: null,
+            activePreviewUrl: null,
+          });
+
+          this.previewPlayer.pause();
+          this.previewPlayer = null;
+        }
+      } else if ('nfc' in jsonMessage) {
+        console.log(jsonMessage.nfc);
+
+        // update value if necessary
+        this.updateNfcValue(jsonMessage.nfc);
+
+        // otherwise, play song
+        const { clientNfcValues } = this.state;
+
+        const index = clientNfcValues.indexOf(jsonMessage.nfc);
+        const uri = clientState[index].uri;
+
+        fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
       }
     };
+  }
+
+  setNfcClientToUpdate(index) {
+    this.setState({ clientNfcToUpdate: index });
   }
 
   getClientList() {
@@ -118,6 +161,15 @@ class App extends Component {
     this.setState({ clientState: clientState });
   }
 
+  updateNfcValue(input) {
+    const { clientNfcToUpdate, clientNfcValues } = this.state;
+
+    if (clientNfcToUpdate >= 0) {
+      clientNfcValues[clientNfcToUpdate] = input;
+      this.setState({ clientNfcToUpdate: -1 });
+    }
+  }
+
   renderGroup(name, clientList) {
     return <Group name={name} sendToStacks={this.sendImagesToStacks} />;
   }
@@ -128,7 +180,8 @@ class App extends Component {
   }
 
   renderStack(i) {
-    return <Stack index={i} updateUrlState={this.updateUrlState} />;
+    const { clientNfcValues } = this.state;
+    return <Stack index={i} updateUrlState={this.updateUrlState} setNfcClientToUpdate={this.setNfcClientToUpdate} />;
   }
 
   renderSpotify() {
@@ -137,7 +190,7 @@ class App extends Component {
 
   render() {
     const stacks = [];
-    const { clientList } = this.state;
+    const { clientList, activePreviewUrl } = this.state;
     clientList.forEach((element) => stacks.push(this.renderStack(element)));
 
     const groups = [
