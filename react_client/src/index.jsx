@@ -19,6 +19,7 @@ class App extends Component {
       activeImageUrl: '',
       clientNfcValues: Array(8).fill(0),
       clientNfcToUpdate: -1,
+      audioPlayer: null,
     };
 
     this.updateClientState = this.updateClientState.bind(this);
@@ -48,17 +49,20 @@ class App extends Component {
           });
 
           if (this.previewPlayer == null && spotifyPayload != null) {
-            this.previewPlayer = new Audio(spotifyPayload.preview_url);
-            this.previewPlayer.play();
+            const previewPlayer = new Audio(spotifyPayload.preview_url);
+            previewPlayer.play();
+
+            this.setState({ audioPlayer: previewPlayer });
+            this.fadeInAudioPlayer();
           }
         } else {
           this.setState({
             activeImageUrl: null,
           });
 
-          if (this.previewPlayer != null) {
-            this.previewPlayer.pause();
-            this.previewPlayer = null;
+          const { audioPlayer } = this.state;
+          if (audioPlayer != null) {
+            this.fadeOutAudioPlayer();
           }
         }
       } else if ('nfc' in jsonMessage) {
@@ -92,6 +96,34 @@ class App extends Component {
     fetch(`http://${host}:8002/client/list`)
       .then((res) => res.json())
       .then((res) => this.setState({ clientList: res }));
+  }
+
+  fadeInAudioPlayer() {
+    const { audioPlayer } = this.state;
+
+    audioPlayer.volume = 0.05;
+    const fadeAudio = setInterval(() => {
+      if (audioPlayer.volume < 0.9) {
+        audioPlayer.volume += 0.1;
+      } else {
+        clearInterval(fadeAudio);
+      }
+    }, 100);
+  }
+
+  fadeOutAudioPlayer() {
+    const { audioPlayer } = this.state;
+
+    const fadeAudio = setInterval(() => {
+      if (audioPlayer.volume > 0.1) {
+        audioPlayer.volume -= 0.1;
+      } else {
+        clearInterval(fadeAudio);
+
+        audioPlayer.pause();
+        this.setState({ audioPlayer: null });
+      }
+    }, 30);
   }
 
   sendTracksToStacks(list) {
