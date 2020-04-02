@@ -161,6 +161,23 @@ app.get('/client/list', function(req, res) {
 });
 
 
+// NFC ENDPOINTS ----------------------------------------  
+
+app.post('/nfc/send-tag', function(req, res) {
+  const tag = req.query.tag;
+
+  console.log(`[tag] ${tag}`);
+
+  if(frontend != null) {
+    const json = { nfc: tag };
+    frontend.sendUTF(JSON.stringify(json));
+  }
+
+  res.status(200).send();
+});
+
+
+
 // SPOTIFY ENDPOINTS ----------------------------------------  
 
 function spotifyPause() {
@@ -194,6 +211,20 @@ app.post('/spotify/control', function(req, res) {
   } else {
     res.status(404).send(`Command '${command}' not found`);
   }
+
+  res.status(200).send();
+});
+
+app.post('/spotify/play/track', function(req, res) {
+  const trackUri = req.query.trackUri;
+  console.log(trackUri);
+
+  const list = [ trackUri ]; 
+  const json = { uris: list };
+
+  spotifyApi.play(json)
+    .then(function(data) { console.log("[spotify] play track: " + trackUri); })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 
   res.status(200).send();
 });
