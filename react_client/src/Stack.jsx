@@ -10,6 +10,7 @@ export default class Stack extends Component {
 
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
+    this.nfcButtonClick = this.nfcButtonClick.bind(this);
   }
 
   onChange(event) {
@@ -34,19 +35,33 @@ export default class Stack extends Component {
     updateUrlState(index, url);
   }
 
+  nfcButtonClick() {
+    const { index, setNfcClientToUpdate } = this.props;
+
+    setNfcClientToUpdate(index);
+  }
+
   render() {
-    const { index } = this.props;
+    const { index, nfcValue } = this.props;
     return (
-      <div className="stack">
-        <form onSubmit={this.onSubmit}>
-          <label htmlFor="name">
-            {index}
-            {' '}
-            : PNG URL
-            <input type="text" name="url" onChange={this.onChange} size="80" />
-          </label>
-          <input type="submit" value="Submit" />
-        </form>
+      <div>
+        <div className="stack" style={{ float: 'left' }}>
+          <form onSubmit={this.onSubmit}>
+            <label htmlFor="name">
+              {index}
+              {' '}
+              : PNG URL
+              <input type="text" name="url" onChange={this.onChange} size="80" />
+            </label>
+            <input type="submit" value="Submit" />
+          </form>
+
+        </div>
+
+        <div>
+          <button type="button" onClick={this.nfcButtonClick}>NFC</button>
+          {nfcValue}
+        </div> 
       </div>
     );
   }
@@ -55,4 +70,6 @@ export default class Stack extends Component {
 Stack.propTypes = {
   index: PropTypes.number.isRequired,
   updateUrlState: PropTypes.func.isRequired,
+  nfcValue: PropTypes.number.isRequired,
+  setNfcClientToUpdate: PropTypes.func.isRequired,
 };

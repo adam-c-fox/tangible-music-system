@@ -8,10 +8,7 @@
 #include "utility/MPU6886.h"
 #include <esp_wifi.h>
 
-#define HOST "ws://18.218.200.149:8000"
-// uint8_t customMac[] = {0xc0, 0xee, 0xfb, 0xd0, 0xe1, 0x02}; //OnePlus
-uint8_t customMac[] = {0x54, 0x99, 0x63, 0xF0, 0x2C, 0x4B}; //iPhone
-// uint8_t customMac[] = {0xf0, 0x18, 0x98, 0x2c, 0xa4, 0xf2}; //MacBook Pro
+#define HOST "ws://192.168.1.33:8000"
 
 // Accelerometer
 float accX = 0;
@@ -50,6 +47,8 @@ void onMessage(WebsocketsMessage message) {
     wsClient.poll();
   } else if (messageType == "text") {
     displayText((const char *) obj["text"], (int) obj["x"], (int) obj["y"], 2);
+  } else if (messageType == "clear") {
+    M5.Lcd.fillRect(0, 240, 240, 60, BLACK);
   }
 }
 
@@ -60,7 +59,6 @@ void onEvent(WebsocketsEvent event, String data) {
         Serial.println("Connnection Closed");
         wsClient.connect(HOST);
         wsClient.ping();
-        //wsClient.send("hello");
     } else if(event == WebsocketsEvent::GotPing) {
         Serial.println("Got a Ping!");
     } else if(event == WebsocketsEvent::GotPong) {
@@ -70,16 +68,13 @@ void onEvent(WebsocketsEvent event, String data) {
 
 void setup() {
     M5.begin();
+    M5.lcd.setRotation(2);
     M5.Power.begin();
     Serial.begin(115200);
     delay(1000);
 
     Serial.print("\nConnecting: ");
     Serial.println(WIFI_SSID);
-
-    WiFi.mode(WIFI_AP);
-    esp_wifi_set_mac(ESP_IF_WIFI_AP, &customMac[0]);
-
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
     while(WiFi.status() != WL_CONNECTED) {
@@ -156,8 +151,8 @@ void loop() {
   bool stationary = isStationary();
   if (stationary != previousStationaryState) {
     stationary ?
-      M5.lcd.fillRect(315, 0, 5, 5, BLACK) :
-      M5.lcd.fillRect(315, 0, 5, 5, WHITE);
+      M5.lcd.fillRect(0, 315, 5, 5, BLACK) :
+      M5.lcd.fillRect(0, 315, 5, 5, WHITE);
 
     previousStationaryState = stationary;
 
