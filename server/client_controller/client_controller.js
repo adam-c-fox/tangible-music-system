@@ -35,7 +35,7 @@ const spotifyApi = new spotify({
   //redirectUri: 'http://192.168.0.14:8002/spotify/callback'
   redirectUri: 'http://localhost:8002/spotify/callback'
 })
-const scopes = ['app-remote-control', 'streaming', 'user-top-read'];
+const scopes = ['app-remote-control', 'streaming', 'user-top-read', 'user-read-playback-state'];
 const state = "";
 const authorizeURL = spotifyApi.createAuthorizeURL(scopes, state);
 let spotifyAuthCode = "";
@@ -255,6 +255,12 @@ app.get('/spotify/has-credentials', function(req, res) {
   const creds = spotifyApi.getCredentials();
 
   res.status(200).json('accessToken' in creds);
+});
+
+app.get('/spotify/is-playing', function(req, res) {
+  spotifyApi.getMyCurrentPlaybackState()
+    .then(function(data) { res.status(200).json(data.body.is_playing ? true : false) })
+    .catch(function(err) { res.status(500).json(err) });
 });
 
 

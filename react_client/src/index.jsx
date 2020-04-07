@@ -51,11 +51,9 @@ class App extends Component {
           });
 
           if (this.previewPlayer == null && spotifyPayload != null) {
-            const previewPlayer = new Audio(spotifyPayload.preview_url);
-            previewPlayer.play();
-
-            this.setState({ audioPlayer: previewPlayer });
-            this.fadeInAudioPlayer();
+            fetch(`http://${host}:8002/spotify/is-playing`)
+              .then((res) => res.json())
+              .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url); }, res ? 1000 : 0); });
           }
         } else {
           this.setState({
@@ -68,8 +66,6 @@ class App extends Component {
           }
         }
       } else if ('nfc' in jsonMessage) {
-        console.log(jsonMessage.nfc);
-
         // update value if necessary
         this.updateNfcValue(jsonMessage.nfc);
 
@@ -101,11 +97,17 @@ class App extends Component {
   }
 
   getSpotifyCredsStatus() {
-    console.log('get');
-
     fetch(`http://${host}:8002/spotify/has-credentials`)
       .then((res) => res.json())
       .then((res) => this.setState({ backendHasSpotifyCreds: res }));
+  }
+
+  startPreview(previewUrl) {
+    const previewPlayer = new Audio(previewUrl);
+    previewPlayer.play();
+
+    this.setState({ audioPlayer: previewPlayer });
+    this.fadeInAudioPlayer();
   }
 
   fadeInAudioPlayer() {
