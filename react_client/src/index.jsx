@@ -20,6 +20,7 @@ class App extends Component {
       clientNfcValues: Array(8).fill(0),
       clientNfcToUpdate: -1,
       audioPlayer: null,
+      backendHasSpotifyCreds: null,
     };
 
     this.updateClientState = this.updateClientState.bind(this);
@@ -29,6 +30,7 @@ class App extends Component {
 
   componentDidMount() {
     this.getClientList();
+    this.getSpotifyCredsStatus();
 
     client.onopen = () => {
       console.log('WS connected.');
@@ -96,6 +98,14 @@ class App extends Component {
     fetch(`http://${host}:8002/client/list`)
       .then((res) => res.json())
       .then((res) => this.setState({ clientList: res }));
+  }
+
+  getSpotifyCredsStatus() {
+    console.log('get');
+
+    fetch(`http://${host}:8002/spotify/has-credentials`)
+      .then((res) => res.json())
+      .then((res) => this.setState({ backendHasSpotifyCreds: res }));
   }
 
   fadeInAudioPlayer() {
@@ -201,6 +211,10 @@ class App extends Component {
     }
   }
 
+  returnCredsButton() {
+    return <button type="button" onClick={() => window.open(`http://${host}:8002/spotify/authorise`, '_blank')}>Add Credentials</button>;
+  }
+
   renderGroup(name) {
     return <Group name={name} sendToStacks={this.sendImagesToStacks} />;
   }
@@ -231,6 +245,9 @@ class App extends Component {
     const active = this.renderActive();
     const spotify = this.renderSpotify();
 
+    const { backendHasSpotifyCreds } = this.state;
+    const addCredsButton = !backendHasSpotifyCreds ? this.returnCredsButton() : null;
+
     return (
       <div className="App">
         <h1>client_controller</h1>
@@ -247,6 +264,8 @@ class App extends Component {
 
           <h2>spotify</h2>
           <p>{spotify}</p>
+
+          {addCredsButton}
         </div>
       </div>
     );

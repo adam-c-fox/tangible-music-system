@@ -59,7 +59,7 @@ export default class Stack extends Component {
         </div>
 
         <div>
-          <button type="button" onClick={this.nfcButtonClick}>NFC</button>
+          <button type="button" onClick={this.nfcButtonClick}>Program NFC</button>
           {nfcValue}
         </div> 
       </div>

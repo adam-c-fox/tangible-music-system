@@ -251,6 +251,12 @@ app.get('/spotify/authorise', function(req, res) {
   res.status(200).redirect(authorizeURL);
 });
 
+app.get('/spotify/has-credentials', function(req, res) {
+  const creds = spotifyApi.getCredentials();
+
+  res.status(200).json('accessToken' in creds);
+});
+
 
 // UTILS ----------------------------------------  
 
