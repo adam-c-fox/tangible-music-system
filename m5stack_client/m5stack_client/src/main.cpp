@@ -11,13 +11,13 @@
 #define HOST "ws://192.168.1.33:8000"
 
 // Accelerometer
-float accX = 0;
-float accY = 0;
-float accZ = 0;
-float threshold = 0.1;
-float stationaryX = 0;
-float stationaryY = 0;
-float stationaryZ = 1;
+float gyroXoffset = 0;
+float gyroYoffset = 0;
+float gyroZoffset = 0;
+float gyroX = 0;
+float gyroY = 0;
+float gyroZ = 0;
+float threshold = 5;
 int previousStationaryState = 3;
 bool previousState = true;
 int buffer [5];
@@ -98,6 +98,7 @@ void setup() {
 
     // MPU6886
     mpu.Init();
+    mpu.getGyroData(&gyroXoffset, &gyroYoffset, &gyroZoffset);
 }
 
 String httpGET(String url) {
@@ -123,14 +124,14 @@ String httpGET(String url) {
 }
 
 bool isStationary() {
-  mpu.getAccelData(&accX, &accY, &accZ);
-  float value = (accX-stationaryX) + (accY-stationaryY) + (accZ-stationaryZ);
+  mpu.getGyroData(&gyroX, &gyroY, &gyroZ);
+  float gyro = sq(gyroX - gyroXoffset) + sq(gyroY - gyroYoffset) + sq(gyroZ - gyroZoffset);
 
   // Populate buffer
   for (int i=4; i>0; i--) {
     buffer[i] = buffer[i-1];
   }
-  buffer[0] = value > threshold;
+  buffer[0] = gyro > threshold;
 
   // Poll buffer  
   int count = 0;
