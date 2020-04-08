@@ -21,6 +21,8 @@ class App extends Component {
       clientNfcToUpdate: -1,
       audioPlayer: null,
       backendHasSpotifyCreds: null,
+      spotifyWasPlaying: false,
+      nfcCurrentlyPlaying: null,
     };
 
     this.updateClientState = this.updateClientState.bind(this);
@@ -37,51 +39,47 @@ class App extends Component {
     };
 
     client.onmessage = (message) => {
-      console.log(message);
-
+      const { clientState, audioPlayer, clientNfcToUpdate } = this.state;
       const jsonMessage = JSON.parse(message.data);
       console.log(jsonMessage);
 
-      const { clientState } = this.state;
       if ('focus' in jsonMessage) {
         if (jsonMessage.focus) {
           const spotifyPayload = clientState[jsonMessage.id];
-          this.setState({
-            activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '',
-          });
+          this.setState({ activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '' });
 
-          if (this.previewPlayer == null && spotifyPayload != null) {
+          if (audioPlayer == null && spotifyPayload != null && clientNfcToUpdate === -1) {
             fetch(`http://${host}:8002/spotify/is-playing`)
               .then((res) => res.json())
-              .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url); }, res ? 1000 : 0); });
+              .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 1000 : 0); });
           }
         } else {
-          this.setState({
-            activeImageUrl: null,
-          });
+          this.setState({ activeImageUrl: null });
 
-          const { audioPlayer } = this.state;
           if (audioPlayer != null) {
             this.fadeOutAudioPlayer();
           }
         }
       } else if ('nfc' in jsonMessage) {
+        const { nfc } = jsonMessage;
+        const { clientNfcValues, nfcCurrentlyPlaying } = this.state;
+
         // update value if necessary
-        this.updateNfcValue(jsonMessage.nfc);
+        this.updateNfcValue(nfc);
 
-        // otherwise, play song
-        const { clientNfcValues } = this.state;
+        // ignore if same tag is reported
+        if (nfc !== nfcCurrentlyPlaying) {
+          this.setState({ nfcCurrentlyPlaying: nfc });
+          const { uri } = clientState[clientNfcValues.indexOf(nfc)];
 
-        const index = clientNfcValues.indexOf(jsonMessage.nfc);
-        const uri = clientState[index].uri;
-
-        fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
+          fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
+            method: 'POST',
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          });
+        }
       }
     };
   }
@@ -102,11 +100,16 @@ class App extends Component {
       .then((res) => this.setState({ backendHasSpotifyCreds: res }));
   }
 
-  startPreview(previewUrl) {
+  startPreview(previewUrl, spotifyWasPlaying) {
     const previewPlayer = new Audio(previewUrl);
     previewPlayer.play();
-
     this.setState({ audioPlayer: previewPlayer });
+
+    if (spotifyWasPlaying) {
+      this.setState({ spotifyWasPlaying: true });
+      fetch(`http://${host}:8002/spotify/control?command=pause`, { method: 'POST' });
+    }
+
     this.fadeInAudioPlayer();
   }
 
@@ -124,7 +127,7 @@ class App extends Component {
   }
 
   fadeOutAudioPlayer() {
-    const { audioPlayer } = this.state;
+    const { audioPlayer, spotifyWasPlaying } = this.state;
 
     const fadeAudio = setInterval(() => {
       if (audioPlayer.volume > 0.1) {
@@ -136,6 +139,10 @@ class App extends Component {
         this.setState({ audioPlayer: null });
       }
     }, 30);
+
+    if (spotifyWasPlaying) {
+      fetch(`http://${host}:8002/spotify/control?command=play`, { method: 'POST' });
+    }
   }
 
   sendTracksToStacks(list) {
