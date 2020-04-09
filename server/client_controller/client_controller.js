@@ -46,8 +46,13 @@ const fs = require('fs');
 const request = require('request');
 
 // Business logic
-const clients = {};
+const connections = {};
+const macToConnections = new Map();
 var frontend = null;
+let nfcToMac = new Map();
+nfcToMac.set(89, 'A4:CF:12:76:9A:A8');
+nfcToMac.set(95, '80:7D:3A:DB:D9:24');
+nfcToMac.set(108, '24:6F:28:AE:99:9C');
 
 function clientsLog(text) {
   console.log('[clients] ' + text);
@@ -61,7 +66,7 @@ const getUniqueID = () => {
   //const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
   //return s4() + s4() + '-' + s4();
 
-  return Object.keys(clients).length;
+  return Object.keys(connections).length;
 };
 
 
@@ -69,11 +74,11 @@ const getUniqueID = () => {
 // WEBSOCKETS ----------------------------------------  
 
 clientsWsServer.on('request', function(request) {
-  var userID = getUniqueID();
+  const userID = getUniqueID();
   clientsLog(`${new Date()} Received a new connection from origin ${request.origin}.`);
   const connection = request.accept(null, request.origin);
-  clients[userID] = connection;
-  clientsLog(`connected: ${userID} in ${Object.getOwnPropertyNames(clients)}`);
+  connections[userID] = connection;
+  clientsLog(`connected: ${userID} in ${Object.getOwnPropertyNames(connections)}`);
 
   // Pass userID to device 
   const json = { command:"id", userID:Number(userID) };
@@ -85,21 +90,22 @@ clientsWsServer.on('request', function(request) {
   connection.on('message', function(message) {
     clientsLog(`[${userID}] message: ${message.utf8Data}`);
     const msgContents = JSON.parse(message.utf8Data);
+    const numOfFields = Object.getOwnPropertyNames(msgContents).length;
 
-    if(frontend != null) {
-      const json = { id: Number(userID), focus: msgContents['focus']}
+    if ('mac' in msgContents && numOfFields === 1) {
+      macToConnections.set(msgContents.mac, userID);
+    } else if(frontend != null) {
+      const json = { id: Number(userID), mac: msgContents['mac'], focus: msgContents['focus'] }
       frontend.sendUTF(JSON.stringify(json));
     }
   });
 
   connection.on('close', function(reasonCode, description) {
     clientsLog(`[${userID}] close: ${description} (${reasonCode})`);
-    //delete clients[userID];
   });
 
   clientsWsServer.on('close', function(connection) {
     clientsLog(`${new Date()} Peer ${userID} disconnected.`);
-    //delete clients[userID];
   });
 });
 
@@ -118,64 +124,57 @@ frontendWsServer.on('request', function(request) {
 // STACK CONTROL ENDPOINTS ----------------------------------------  
 
 app.post('/send/image', function(req, res) {
-  var ID = req.query.ID;
-  var pngUrl = req.query.pngUrl;
-  var x = Number(req.query.x);
-  var y = Number(req.query.y);
+  const { mac, pngUrl, x, y } = req.query;
 
-  const json = { command:"pngUrl", url:pngUrl, x:x, y:y };
-  console.log(`[image] [${ID}] ${JSON.stringify(json)}`);
+  const json = { command:"pngUrl", url:pngUrl, x:Number(x), y:Number(y) };
+  console.log(`[image] [${mac}] ${JSON.stringify(json)}`);
 
-  clients[ID].sendUTF(JSON.stringify(json));
+  connections[macToConnections.get(mac)].sendUTF(JSON.stringify(json));
   
   res.status(200).send();
 });
 
 app.post('/send/text', function(req, res) {
-  var ID = req.query.ID;
-  var text = req.query.text;
-  var x = Number(req.query.x);
-  var y = Number(req.query.y);
+  const { mac, text, x, y } = req.query;
 
-  const json = { command:"text", text:text, x:x, y:y };
-  console.log(`[text] [${ID}] ${JSON.stringify(json)}`);
+  const json = { command:"text", text:text, x:Number(x), y:Number(y) };
+  console.log(`[text] [${mac}] ${JSON.stringify(json)}`);
 
-  clients[ID].sendUTF(JSON.stringify(json));
+  connections[macToConnections.get(mac)].sendUTF(JSON.stringify(json));
   
   res.status(200).send();
 });
 
 app.post('/send/clear', function(req, res) {
-  var ID = req.query.ID;
+  const { mac } = req.query;
 
   const json = { command:"clear" };
-  console.log(`[clear] [${ID}]`);
+  console.log(`[clear] [${mac}]`);
 
-  clients[ID].sendUTF(JSON.stringify(json));
+  connections[macToConnections.get(mac)].sendUTF(JSON.stringify(json));
 
   res.status(200).send();
 });
 
 app.get('/client/list', function(req, res) {
-  res.json(Object.keys(clients));
+  res.json(Array.from(macToConnections));
 });
 
 
 // NFC ENDPOINTS ----------------------------------------  
 
 app.post('/nfc/send-tag', function(req, res) {
-  const tag = req.query.tag;
+  const { tag } = req.query;
 
   console.log(`[tag] ${tag}`);
 
   if(frontend != null) {
-    const json = { nfc: tag };
+    const json = { nfc: nfcToMac.get(Number(tag)) };
     frontend.sendUTF(JSON.stringify(json));
   }
 
   res.status(200).send();
 });
-
 
 
 // SPOTIFY ENDPOINTS ----------------------------------------  
@@ -202,7 +201,7 @@ app.get('/spotify/top-tracks', function(req, res) {
 });
 
 app.post('/spotify/control', function(req, res) {
-  const command = req.query.command;
+  const { command } = req.query;
 
   if(command == 'pause') {
     spotifyPause();
@@ -216,8 +215,7 @@ app.post('/spotify/control', function(req, res) {
 });
 
 app.post('/spotify/play/track', function(req, res) {
-  const trackUri = req.query.trackUri;
-  console.log(trackUri);
+  const { trackUri } = req.query;
 
   const list = [ trackUri ]; 
   const json = { uris: list };
@@ -232,7 +230,7 @@ app.post('/spotify/play/track', function(req, res) {
 app.get('/spotify/callback', function(req, res) {
   // Auth code result  
   spotifyAuthCode = req.query.code;
-  res.status(200).send("Auth code set.");
+  res.status(200).redirect("http://localhost:3000");
 
   spotifyApi.authorizationCodeGrant(spotifyAuthCode)
     .then(function(data) {
@@ -266,19 +264,20 @@ app.get('/spotify/is-playing', function(req, res) {
 
 // UTILS ----------------------------------------  
 
-function convert(srcFilepath, destFilepath) {
+function convert(srcFilepath, destFilepath, res, url) {
   sharp(srcFilepath)
-    .resize(240, 240)
+    .resize(100, 100)
     .png()
     .toFile(destFilepath, (err, info) => {
       //console.log(err);
       //console.log(info);
-    });
+      returnResponse(res, url);
+    })
 }
 
-async function wait(srcFilepath, destFilepath) {
+async function wait(srcFilepath, destFilepath, res, url) {
   await sleep(300);
-  convert(srcFilepath, destFilepath); 
+  convert(srcFilepath, destFilepath, res, url); 
 }
 
 function sleep(ms) {
@@ -286,6 +285,10 @@ function sleep(ms) {
     setTimeout(resolve, ms);
   });
 }   
+
+function returnResponse(res, returnUrl) {
+  res.status(200).json(returnUrl);
+};
 
 app.post('/convert/jpeg-to-png', function(req, res) {
   let jpegUrl = req.query.jpegUrl;
@@ -299,12 +302,9 @@ app.post('/convert/jpeg-to-png', function(req, res) {
   jpegUrl = jpegUrl.replace(/^https:\/\//i, 'http://');
 
   // Retrieve image, pass to conversion
-  request(jpegUrl).pipe(fs.createWriteStream(srcFilepath)).on('close', () => wait(srcFilepath, destFilepath));
-
   // TODO: migrate to global host ip
   const returnUrl = `http://192.168.1.33:5001/client_controller/images/png/${filename}.png`;
- 
-  res.status(200).json(returnUrl);
+  request(jpegUrl).pipe(fs.createWriteStream(srcFilepath)).on('close', () => wait(srcFilepath, destFilepath, res, returnUrl));
 });
 
-app.listen(port, () => console.log(`m5stack REST interface: ${port}`))
+app.listen(port, () => { console.log(`m5stack REST interface: ${port}`); });
