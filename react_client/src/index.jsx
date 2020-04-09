@@ -15,19 +15,16 @@ class App extends Component {
     super(props);
     this.state = {
       clientList: [],
-      clientState: Array(8).fill(null),
+      clientState: new Map(),
       activeImageUrl: '',
-      clientNfcValues: Array(8).fill(0),
-      clientNfcToUpdate: -1,
       audioPlayer: null,
       backendHasSpotifyCreds: null,
       spotifyWasPlaying: false,
-      nfcCurrentlyPlaying: {},
+      nfcCurrentlyPlaying: '',
     };
 
     this.updateClientState = this.updateClientState.bind(this);
     this.sendTracksToStacks = this.sendTracksToStacks.bind(this);
-    this.setNfcClientToUpdate = this.setNfcClientToUpdate.bind(this);
   }
 
   componentDidMount() {
@@ -39,16 +36,16 @@ class App extends Component {
     };
 
     client.onmessage = (message) => {
-      const { clientState, audioPlayer, clientNfcToUpdate } = this.state;
+      const { clientState, audioPlayer } = this.state;
       const jsonMessage = JSON.parse(message.data);
       console.log(jsonMessage);
 
       if ('focus' in jsonMessage) {
         if (jsonMessage.focus) {
-          const spotifyPayload = clientState[jsonMessage.id];
+          const spotifyPayload = clientState.get(jsonMessage.mac);
           this.setState({ activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '' });
 
-          if (audioPlayer == null && spotifyPayload != null && clientNfcToUpdate === -1) {
+          if (audioPlayer == null && spotifyPayload != null) {
             fetch(`http://${host}:8002/spotify/is-playing`)
               .then((res) => res.json())
               .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 2000 : 0); });
@@ -62,16 +59,12 @@ class App extends Component {
         }
       } else if ('nfc' in jsonMessage) {
         const { nfc } = jsonMessage;
-        const { clientNfcValues, nfcCurrentlyPlaying } = this.state;
-
-        // update value if necessary
-        this.updateNfcValue(nfc);
+        const { nfcCurrentlyPlaying } = this.state;
 
         // ignore if same tag is reported
-        if (nfc !== nfcCurrentlyPlaying.nfc) {
-          const json = { nfc, id: clientNfcValues.indexOf(nfc) };
-          this.setState({ nfcCurrentlyPlaying: json });
-          const { uri } = clientState[clientNfcValues.indexOf(nfc)];
+        if (nfc !== nfcCurrentlyPlaying) {
+          this.setState({ nfcCurrentlyPlaying: nfc });
+          const { uri } = clientState.get(nfc);
 
           fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
             method: 'POST',
@@ -83,10 +76,6 @@ class App extends Component {
         }
       }
     };
-  }
-
-  setNfcClientToUpdate(index) {
-    this.setState({ clientNfcToUpdate: index });
   }
 
   getClientList() {
@@ -155,25 +144,25 @@ class App extends Component {
       const spotifyPayload = list[index];
       list.splice(index, 1);
 
-      console.log(`${element}: ${spotifyPayload.name}`);
+      console.log(`${element[0]}: ${spotifyPayload.name}`);
 
       // Send text
-      this.clearStackText(element);
-      this.sendTextToStack(element, 10, 250, spotifyPayload.name);
-      this.sendTextToStack(element, 10, 265, spotifyPayload.album.name);
-      this.sendTextToStack(element, 10, 280, spotifyPayload.artists[0].name);
+      this.clearStackText(element[0]);
+      this.sendTextToStack(element[0], 10, 250, spotifyPayload.name);
+      this.sendTextToStack(element[0], 10, 265, spotifyPayload.album.name);
+      this.sendTextToStack(element[0], 10, 280, spotifyPayload.artists[0].name);
 
       // Convert and send image
       fetch(`http://${host}:8002/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`, { method: 'POST' })
         .then((res) => res.json())
-        .then((res) => this.sendImageToStack(element, 0, 0, res));
+        .then((res) => this.sendImageToStack(element[0], 0, 0, res));
 
-      this.updateClientState(element, spotifyPayload);
+      this.updateClientState(element[0], spotifyPayload);
     });
   }
 
   clearStackText(id) {
-    fetch(`http://${host}:8002/send/clear?ID=${id}`, {
+    fetch(`http://${host}:8002/send/clear?mac=${id}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -183,7 +172,7 @@ class App extends Component {
   }
 
   sendTextToStack(id, x, y, text) {
-    const bodyString = `ID=${id}&text=${text}&x=${x}&y=${y}`;
+    const bodyString = `mac=${id}&text=${text}&x=${x}&y=${y}`;
 
     fetch(`http://${host}:8002/send/text?${bodyString}`, {
       method: 'POST',
@@ -195,7 +184,7 @@ class App extends Component {
   }
 
   sendImageToStack(id, x, y, pngUrl) {
-    const bodyString = `ID=${id}&pngUrl=${pngUrl}&x=${x}&y=${y}`;
+    const bodyString = `mac=${id}&pngUrl=${pngUrl}&x=${x}&y=${y}`;
 
     fetch(`http://${host}:8002/send/image?${bodyString}`, {
       method: 'POST',
@@ -208,17 +197,8 @@ class App extends Component {
 
   updateClientState(i, stateObj) {
     const { clientState } = this.state;
-    clientState[i] = stateObj;
+    clientState.set(i, stateObj);
     this.setState({ clientState });
-  }
-
-  updateNfcValue(input) {
-    const { clientNfcToUpdate, clientNfcValues } = this.state;
-
-    if (clientNfcToUpdate >= 0) {
-      clientNfcValues[clientNfcToUpdate] = input;
-      this.setState({ clientNfcToUpdate: -1 });
-    }
   }
 
   returnCredsButton() {
@@ -235,7 +215,7 @@ class App extends Component {
   }
 
   renderStack(i) {
-    return <Stack index={i} updateUrlState={this.updateUrlState} setNfcClientToUpdate={this.setNfcClientToUpdate} />;
+    return <Stack index={i} updateUrlState={this.updateUrlState} />;
   }
 
   renderSpotify() {
@@ -245,7 +225,7 @@ class App extends Component {
   render() {
     const stacks = [];
     const { clientList } = this.state;
-    clientList.forEach((element) => stacks.push(this.renderStack(element)));
+    clientList.forEach((element) => stacks.push(this.renderStack(element[0])));
 
     const groups = [
       this.renderGroup('80s', clientList),
@@ -268,13 +248,11 @@ class App extends Component {
 
         <div style={{ margin: '20px' }}>
           {stacks}
+        </div>
 
-          <h2>group_send</h2>
-          <p>{groups}</p>
-
+        <div style={{ margin: '20px', clear: 'both' }}>
           <h2>spotify</h2>
           <p>{spotify}</p>
-
           {addCredsButton}
         </div>
       </div>

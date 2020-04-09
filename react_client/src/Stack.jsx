@@ -42,7 +42,7 @@ export default class Stack extends Component {
   }
 
   render() {
-    const { index, nfcValue } = this.props;
+    const { index } = this.props;
     return (
       <div>
         <div className="stack" style={{ float: 'left' }}>
@@ -50,18 +50,12 @@ export default class Stack extends Component {
             <label htmlFor="name">
               {index}
               {' '}
-              : PNG URL
+              - PNG URL
               <input type="text" name="url" onChange={this.onChange} size="80" />
             </label>
             <input type="submit" value="Submit" />
           </form>
-
         </div>
-
-        <div>
-          <button type="button" onClick={this.nfcButtonClick}>Program NFC</button>
-          {nfcValue}
-        </div> 
       </div>
     );
   }
@@ -70,6 +64,5 @@ export default class Stack extends Component {
 Stack.propTypes = {
   index: PropTypes.number.isRequired,
   updateUrlState: PropTypes.func.isRequired,
-  nfcValue: PropTypes.number.isRequired,
   setNfcClientToUpdate: PropTypes.func.isRequired,
 };
