@@ -22,7 +22,7 @@ class App extends Component {
       audioPlayer: null,
       backendHasSpotifyCreds: null,
       spotifyWasPlaying: false,
-      nfcCurrentlyPlaying: null,
+      nfcCurrentlyPlaying: {},
     };
 
     this.updateClientState = this.updateClientState.bind(this);
@@ -51,7 +51,7 @@ class App extends Component {
           if (audioPlayer == null && spotifyPayload != null && clientNfcToUpdate === -1) {
             fetch(`http://${host}:8002/spotify/is-playing`)
               .then((res) => res.json())
-              .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 1000 : 0); });
+              .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 2000 : 0); });
           }
         } else {
           this.setState({ activeImageUrl: null });
@@ -68,8 +68,9 @@ class App extends Component {
         this.updateNfcValue(nfc);
 
         // ignore if same tag is reported
-        if (nfc !== nfcCurrentlyPlaying) {
-          this.setState({ nfcCurrentlyPlaying: nfc });
+        if (nfc !== nfcCurrentlyPlaying.nfc) {
+          const json = { nfc, id: clientNfcValues.indexOf(nfc) };
+          this.setState({ nfcCurrentlyPlaying: json });
           const { uri } = clientState[clientNfcValues.indexOf(nfc)];
 
           fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
@@ -221,7 +222,7 @@ class App extends Component {
   }
 
   returnCredsButton() {
-    return <button type="button" onClick={() => window.open(`http://${host}:8002/spotify/authorise`, '_blank')}>Add Credentials</button>;
+    return <button type="button" onClick={() => window.open(`http://${host}:8002/spotify/authorise`, '_self')}>Add Credentials</button>;
   }
 
   renderGroup(name) {
