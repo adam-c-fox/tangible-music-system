@@ -17,7 +17,7 @@ float gyroZoffset = 0;
 float gyroX = 0;
 float gyroY = 0;
 float gyroZ = 0;
-float threshold = 5;
+float threshold = 15;
 int previousStationaryState = 3;
 bool previousState = true;
 int buffer [5];
@@ -49,6 +49,11 @@ void onMessage(WebsocketsMessage message) {
     displayText((const char *) obj["text"], (int) obj["x"], (int) obj["y"], 2);
   } else if (messageType == "clear") {
     M5.Lcd.fillRect(0, 240, 240, 60, BLACK);
+  } else if (messageType == "id") {
+    JSONVar obj;
+    obj["mac"] = WiFi.macAddress();
+    String json = JSON.stringify(obj);
+    wsClient.send(json);
   }
 }
 
@@ -57,8 +62,8 @@ void onEvent(WebsocketsEvent event, String data) {
         Serial.println("Connnection Opened");
     } else if(event == WebsocketsEvent::ConnectionClosed) {
         Serial.println("Connnection Closed");
-        wsClient.connect(HOST);
-        wsClient.ping();
+        // TODO: Do something smarter than restart on connection lost
+        ESP.restart();
     } else if(event == WebsocketsEvent::GotPing) {
         Serial.println("Got a Ping!");
     } else if(event == WebsocketsEvent::GotPong) {
@@ -160,6 +165,7 @@ void loop() {
     // Send state to server
     JSONVar obj;
     obj["focus"] = !stationary;
+    obj["mac"] = WiFi.macAddress();
     String json = JSON.stringify(obj);
     wsClient.send(json);
   }
