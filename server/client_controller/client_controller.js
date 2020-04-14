@@ -216,6 +216,16 @@ app.get('/spotify/artist-top-tracks', function(req, res) {
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 });
 
+app.get('/spotify/get-similar-tracks', function(req, res) {
+  const { trackID } = req.query;
+
+  spotifyApi.getRecommendations({ seed_tracks: [trackID] })
+    .then(function(data) {
+      res.status(200).json(data.body.tracks);
+    })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+});
+
 app.post('/spotify/control', function(req, res) {
   const { command } = req.query;
 
