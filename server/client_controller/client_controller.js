@@ -200,6 +200,22 @@ app.get('/spotify/top-tracks', function(req, res) {
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 });
 
+app.get('/spotify/artist-top-tracks', function(req, res) {
+  const { artistName } = req.query;
+
+  spotifyApi.searchArtists(artistName)
+    .then(function(data) {
+      const { id } = data.body.artists.items[0];
+
+      spotifyApi.getArtistTopTracks(id, 'gb')
+        .then(function(data) {
+          res.status(200).json(data);
+        })
+        .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+    })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+});
+
 app.post('/spotify/control', function(req, res) {
   const { command } = req.query;
 
