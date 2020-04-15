@@ -226,6 +226,28 @@ app.get('/spotify/get-similar-tracks', function(req, res) {
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 });
 
+app.get('/spotify/search-for-playlist', function(req, res) {
+  const { playlistName } = req.query;
+
+  spotifyApi.searchPlaylists(playlistName)
+    .then(function(data) {
+      res.status(200).json(data.body.playlists.items);
+    })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+});
+
+app.get('/spotify/get-tracks-from-playlist', function(req, res) {
+  const { playlistID } = req.query;
+
+  spotifyApi.getPlaylistTracks(playlistID)
+    .then(function(data) {
+      // Retrieve Track object from Playlist object
+      const tracks = data.body.items.map(x => x.track);
+      res.status(200).json(tracks);
+    })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+});
+
 app.post('/spotify/control', function(req, res) {
   const { command } = req.query;
 
