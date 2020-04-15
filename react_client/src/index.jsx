@@ -140,6 +140,11 @@ class App extends Component {
 
     // Choose a random track from the payload to send to each stack
     clientList.forEach((element) => {
+      const mac = element[0];
+      const { nfcCurrentlyPlaying } = this.state;
+      // Don't update currently playing stack
+      if (mac === nfcCurrentlyPlaying) { return; }
+
       const index = Math.floor(Math.random() * (list.length - 1));
       const spotifyPayload = list[index];
       list.splice(index, 1);
@@ -147,17 +152,17 @@ class App extends Component {
       console.log(`${element[0]}: ${spotifyPayload.name}`);
 
       // Send text
-      this.clearStackText(element[0]);
-      this.sendTextToStack(element[0], 10, 250, spotifyPayload.name);
-      this.sendTextToStack(element[0], 10, 265, spotifyPayload.album.name);
-      this.sendTextToStack(element[0], 10, 280, spotifyPayload.artists[0].name);
+      this.clearStackText(mac);
+      this.sendTextToStack(mac, 10, 250, spotifyPayload.name);
+      this.sendTextToStack(mac, 10, 265, spotifyPayload.album.name);
+      this.sendTextToStack(mac, 10, 280, spotifyPayload.artists[0].name);
 
       // Convert and send image
       fetch(`http://${host}:8002/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`, { method: 'POST' })
         .then((res) => res.json())
-        .then((res) => this.sendImageToStack(element[0], 0, 0, res));
+        .then((res) => this.sendImageToStack(mac, 0, 0, res));
 
-      this.updateClientState(element[0], spotifyPayload);
+      this.updateClientState(mac, spotifyPayload);
     });
   }
 
