@@ -96,6 +96,10 @@ class App extends Component {
   }
 
   startPreview(previewUrl, spotifyWasPlaying) {
+    // Don't start preview if stack is no longer active
+    const { activeImageUrl } = this.state;
+    if (activeImageUrl === null) { return; }
+
     const previewPlayer = new Audio(previewUrl);
     previewPlayer.play();
     this.setState({ audioPlayer: previewPlayer });
