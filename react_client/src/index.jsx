@@ -239,11 +239,6 @@ class App extends Component {
     const { clientList } = this.state;
     clientList.forEach((element) => stacks.push(this.renderStack(element[0])));
 
-    const groups = [
-      this.renderGroup('80s', clientList),
-      this.renderGroup('prog_rock', clientList),
-      this.renderGroup('top_songs_2019', clientList),
-    ];
     const active = this.renderActive();
     const spotify = this.renderSpotify();
 
