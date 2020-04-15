@@ -45,7 +45,7 @@ class App extends Component {
           const spotifyPayload = clientState.get(jsonMessage.mac);
           this.setState({ activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '' });
 
-          if (audioPlayer == null && spotifyPayload != null) {
+          if (audioPlayer == null && spotifyPayload != null && !this.isMacCurrentlyPlaying(jsonMessage.mac)) {
             fetch(`http://${host}:8002/spotify/is-playing`)
               .then((res) => res.json())
               .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 2000 : 0); });
@@ -88,6 +88,11 @@ class App extends Component {
     fetch(`http://${host}:8002/spotify/has-credentials`)
       .then((res) => res.json())
       .then((res) => this.setState({ backendHasSpotifyCreds: res }));
+  }
+
+  isMacCurrentlyPlaying(mac) {
+    const { nfcCurrentlyPlaying } = this.state;
+    return (nfcCurrentlyPlaying === mac);
   }
 
   startPreview(previewUrl, spotifyWasPlaying) {
@@ -141,14 +146,12 @@ class App extends Component {
     // Choose a random track from the payload to send to each stack
     clientList.forEach((element) => {
       const mac = element[0];
-      const { nfcCurrentlyPlaying } = this.state;
       // Don't update currently playing stack
-      if (mac === nfcCurrentlyPlaying) { return; }
+      if (this.isMacCurrentlyPlaying(mac)) { return; }
 
       const index = Math.floor(Math.random() * (list.length - 1));
       const spotifyPayload = list[index];
       list.splice(index, 1);
-
       console.log(`${element[0]}: ${spotifyPayload.name}`);
 
       // Send text
