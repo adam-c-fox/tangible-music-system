@@ -9,6 +9,10 @@ import Spotify from './Spotify';
 
 export const host = 'localhost';
 export const client = new W3CWebSocket(`ws://${host}:8001`);
+export const clientControllerPort = 8002;
+export const logicPort = 8003;
+export const spotifyPort = 8004;
+export const utilsPort = 8005;
 
 class App extends Component {
   constructor(props) {
@@ -46,7 +50,7 @@ class App extends Component {
           this.setState({ activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '' });
 
           if (audioPlayer == null && spotifyPayload != null && !this.isMacCurrentlyPlaying(jsonMessage.mac)) {
-            fetch(`http://${host}:8002/spotify/is-playing`)
+            fetch(`http://${host}:${spotifyPort}/spotify/is-playing`)
               .then((res) => res.json())
               .then((res) => { setTimeout(() => { this.startPreview(spotifyPayload.preview_url, res); }, res ? 2000 : 0); });
           }
@@ -66,7 +70,7 @@ class App extends Component {
           this.setState({ nfcCurrentlyPlaying: nfc });
           const { uri } = clientState.get(nfc);
 
-          fetch(`http://${host}:8002/spotify/play/track?trackUri=${uri}`, {
+          fetch(`http://${host}:${spotifyPort}/spotify/play/track?trackUri=${uri}`, {
             method: 'POST',
             headers: {
               Accept: 'application/json',
@@ -79,13 +83,13 @@ class App extends Component {
   }
 
   getClientList() {
-    fetch(`http://${host}:8002/client/list`)
+    fetch(`http://${host}:${clientControllerPort}/client/list`)
       .then((res) => res.json())
       .then((res) => this.setState({ clientList: res }));
   }
 
   getSpotifyCredsStatus() {
-    fetch(`http://${host}:8002/spotify/has-credentials`)
+    fetch(`http://${host}:${spotifyPort}/spotify/has-credentials`)
       .then((res) => res.json())
       .then((res) => this.setState({ backendHasSpotifyCreds: res }));
   }
@@ -106,7 +110,7 @@ class App extends Component {
 
     if (spotifyWasPlaying) {
       this.setState({ spotifyWasPlaying: true });
-      fetch(`http://${host}:8002/spotify/control?command=pause`, { method: 'POST' });
+      fetch(`http://${host}:${spotifyPort}/spotify/control?command=pause`, { method: 'POST' });
     }
 
     this.fadeInAudioPlayer();
@@ -140,7 +144,7 @@ class App extends Component {
     }, 30);
 
     if (spotifyWasPlaying) {
-      fetch(`http://${host}:8002/spotify/control?command=play`, { method: 'POST' });
+      fetch(`http://${host}:${spotifyPort}/spotify/control?command=play`, { method: 'POST' });
     }
   }
 
@@ -165,7 +169,7 @@ class App extends Component {
       this.sendTextToStack(mac, 10, 280, spotifyPayload.artists[0].name);
 
       // Convert and send image
-      fetch(`http://${host}:8002/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`, { method: 'POST' })
+      fetch(`http://${host}:${utilsPort}/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`, { method: 'POST' })
         .then((res) => res.json())
         .then((res) => this.sendImageToStack(mac, 0, 0, res));
 
@@ -174,7 +178,7 @@ class App extends Component {
   }
 
   clearStackText(id) {
-    fetch(`http://${host}:8002/send/clear?mac=${id}`, {
+    fetch(`http://${host}:${clientControllerPort}/send/clear?mac=${id}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -186,7 +190,7 @@ class App extends Component {
   sendTextToStack(id, x, y, text) {
     const bodyString = `mac=${id}&text=${text}&x=${x}&y=${y}`;
 
-    fetch(`http://${host}:8002/send/text?${bodyString}`, {
+    fetch(`http://${host}:${clientControllerPort}/send/text?${bodyString}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -214,7 +218,7 @@ class App extends Component {
   }
 
   returnCredsButton() {
-    return <button type="button" onClick={() => window.open(`http://${host}:8002/spotify/authorise`, '_self')}>Add Credentials</button>;
+    return <button type="button" onClick={() => window.open(`http://${host}:${spotifyPort}/spotify/authorise`, '_self')}>Add Credentials</button>;
   }
 
   renderGroup(name) {

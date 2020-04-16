@@ -1,7 +1,7 @@
 /* eslint-disable class-methods-use-this */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-export const host = '192.168.1.33';
+import { host, spotifyPort, utilsPort } from '.';
 const spotifyPayloadSize = 20;
 
 export default class Spotify extends Component {
@@ -18,7 +18,7 @@ export default class Spotify extends Component {
   topTracksOnClick() {
     const { sendToStacks } = this.props;
 
-    fetch(`http://${host}:8002/spotify/top-tracks`)
+    fetch(`http://${host}:${spotifyPort}/spotify/top-tracks`)
       .then((res) => res.json())
       .then((res) => sendToStacks(res));
   }
@@ -27,7 +27,7 @@ export default class Spotify extends Component {
     this.setState({ topTracksResponse: tracks });
 
     tracks.forEach((element) => {
-      fetch(`http://${host}:8002/convert/jpeg-to-png?jpegUrl=${element.album.images[0].url}`, { method: 'POST' })
+      fetch(`http://${host}:${utilsPort}/convert/jpeg-to-png?jpegUrl=${element.album.images[0].url}`, { method: 'POST' })
         .then((res) => res.json())
         .then((res) => this.pushTrack(res));
     });
@@ -43,7 +43,7 @@ export default class Spotify extends Component {
       sendToStacks(tracksToSend);
       this.setState({ tracksToSend: [] });
     } else {
-      this.setState({ tracksToSend: tracksToSend });
+      this.setState({ tracksToSend });
     }
   }
 
