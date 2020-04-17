@@ -130,10 +130,8 @@ app.post('/nfc/send-tag', function(req, res) {
 
   console.log(`[tag] ${tag}`);
 
-  if(frontend != null) {
-    const json = { nfc: nfcToMac.get(Number(tag)) };
-    frontend.sendUTF(JSON.stringify(json));
-  }
+  const json = { nfc: nfcToMac.get(Number(tag)) };
+  axios.post('http://localhost:8003/nfc/currently-playing', { payload: json })
 
   res.status(200).send();
 });

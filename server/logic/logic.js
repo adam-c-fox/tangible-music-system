@@ -68,6 +68,7 @@ app.get('/spotify/send/top-tracks', function(req, res) {
 
 // STACKS ------------------------------ 
 let clientList = [];
+let nfcCurrentlyPlaying = '';
 const clientState = new Map();
 
 function sendTracksToStacks(list) {
@@ -75,6 +76,7 @@ function sendTracksToStacks(list) {
     const mac = element[0];
 
     // TODO: implement currently playing stack
+    if(mac === nfcCurrentlyPlaying) { return; }
 
     const index = Math.floor(Math.random() * (list.length - 1));
     const spotifyPayload = list[index];
@@ -98,6 +100,17 @@ function sendTracksToStacks(list) {
     sendUpdatedStateToFrontend(mac, spotifyPayload);
   });
 }
+
+app.post('/nfc/currently-playing', function(req, res) {
+  const { nfc } = req.body.payload; 
+  nfcCurrentlyPlaying = nfc;
+
+  if (frontend != null) {
+      frontend.sendUTF(JSON.stringify(req.body.payload));
+  } 
+
+  res.status(200).send();
+});
 
 function sendUpdatedStateToFrontend(mac, spotifyPayload) {
   const json = { mac, spotifyPayload };
