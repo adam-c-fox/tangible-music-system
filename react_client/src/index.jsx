@@ -28,7 +28,6 @@ class App extends Component {
     };
 
     this.updateClientState = this.updateClientState.bind(this);
-    this.sendTracksToStacks = this.sendTracksToStacks.bind(this);
   }
 
   componentDidMount() {
@@ -78,6 +77,9 @@ class App extends Component {
             },
           });
         }
+      } else if ('mac' in jsonMessage && 'spotifyPayload' in jsonMessage) {
+        const { mac, spotifyPayload } = jsonMessage;
+        this.updateClientState(mac, spotifyPayload);
       }
     };
   }
@@ -146,69 +148,6 @@ class App extends Component {
     if (spotifyWasPlaying) {
       fetch(`http://${host}:${spotifyPort}/spotify/control?command=play`, { method: 'POST' });
     }
-  }
-
-  sendTracksToStacks(list) {
-    const { clientList } = this.state;
-
-    // Choose a random track from the payload to send to each stack
-    clientList.forEach((element) => {
-      const mac = element[0];
-      // Don't update currently playing stack
-      if (this.isMacCurrentlyPlaying(mac)) { return; }
-
-      const index = Math.floor(Math.random() * (list.length - 1));
-      const spotifyPayload = list[index];
-      list.splice(index, 1);
-      console.log(`${element[0]}: ${spotifyPayload.name}`);
-
-      // Send text
-      this.clearStackText(mac);
-      this.sendTextToStack(mac, 10, 250, spotifyPayload.name);
-      this.sendTextToStack(mac, 10, 265, spotifyPayload.album.name);
-      this.sendTextToStack(mac, 10, 280, spotifyPayload.artists[0].name);
-
-      // Convert and send image
-      fetch(`http://${host}:${utilsPort}/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`, { method: 'POST' })
-        .then((res) => res.json())
-        .then((res) => this.sendImageToStack(mac, 0, 0, res));
-
-      this.updateClientState(mac, spotifyPayload);
-    });
-  }
-
-  clearStackText(id) {
-    fetch(`http://${host}:${clientControllerPort}/send/clear?mac=${id}`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
-  sendTextToStack(id, x, y, text) {
-    const bodyString = `mac=${id}&text=${text}&x=${x}&y=${y}`;
-
-    fetch(`http://${host}:${clientControllerPort}/send/text?${bodyString}`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    });
-  }
-
-  sendImageToStack(id, x, y, pngUrl) {
-    const bodyString = `mac=${id}&pngUrl=${pngUrl}&x=${x}&y=${y}`;
-
-    fetch(`http://${host}:8002/send/image?${bodyString}`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-    });
   }
 
   updateClientState(i, stateObj) {
