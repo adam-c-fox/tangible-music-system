@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { host, clientControllerPort } from '.';
 
 export default class Stack extends Component {
   constructor(props) {
@@ -24,7 +25,7 @@ export default class Stack extends Component {
     const { url } = this.state;
 
     const bodyString = `ID=${index}&pngUrl=${url}&x=40&y=0`;
-    fetch(`http://127.0.0.1:8002/send/image?${bodyString}`, {
+    fetch(`http://${host}:${clientControllerPort}/send/image?${bodyString}`, {
       method: 'POST',
       headers: {
         Accept: 'application/json',

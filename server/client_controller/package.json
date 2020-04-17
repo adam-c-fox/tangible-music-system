@@ -1,0 +1,22 @@
+{
+  "name": "client_controller",
+  "version": "1.0.0",
+  "description": "",
+  "main": "client_controller.js",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "jimp": "^0.9.6",
+    "request": "^2.88.2",
+    "spotify-web-api-node": "^4.0.0",
+    "websocket": "^1.0.31",
+    "sharp": "^0.25.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
