@@ -13,9 +13,11 @@ const request = require('request');
 
 // Image hosting
 const imageHostPort = 8006;
-const host = '192.168.1.33';
 const static = require('node-static');
 const http = require('http');
+
+const host = process.env.HOST;
+console.log(`host: ${host}`);
 
 
 // SUPPORT FUNCTIONS ----------------------------------------

@@ -22,7 +22,6 @@ app.use(express.json());
 app.use(cors());
 
 // Business logic
-const host = 'localhost';
 const axios = require('axios');
 const connections = {};
 const macToConnections = new Map();
@@ -30,6 +29,9 @@ let nfcToMac = new Map();
 nfcToMac.set(89, 'A4:CF:12:76:9A:A8');
 nfcToMac.set(95, '80:7D:3A:DB:D9:24');
 nfcToMac.set(108, '24:6F:28:AE:99:9C');
+
+const host = process.env.HOST;
+console.log(`host: ${host}`);
 
 function clientsLog(text) {
   console.log('[clients] ' + text);

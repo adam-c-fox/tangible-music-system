@@ -6,6 +6,8 @@ app.get('/', (req, res) => res.send(as))
 app.use(express.json());
 app.use(cors());
 
+const host = process.env.HOST;
+console.log(`host: ${host}`);
 
 // SPOTIFY CONFIG ----------------------------------------  
 
@@ -13,7 +15,7 @@ const spotify = require('spotify-web-api-node');
 const spotifyApi = new spotify({
   clientId: '52e914108f7c4726aa4e02fb8923ae41',
   clientSecret: '65de00e35a4341e3965c9224340a0f68',
-  redirectUri: `http://localhost:${port}/spotify/callback`
+  redirectUri: `http://${host}:${port}/spotify/callback`
 })
 const scopes = ['app-remote-control', 'streaming', 'user-top-read', 'user-read-playback-state'];
 const state = "";
@@ -122,7 +124,7 @@ app.post('/spotify/play/track', function(req, res) {
 app.get('/spotify/callback', function(req, res) {
   // Auth code result  
   spotifyAuthCode = req.query.code;
-  res.status(200).redirect("http://localhost:3000");
+  res.status(200).redirect(`http://${host}:3000`);
 
   spotifyApi.authorizationCodeGrant(spotifyAuthCode)
     .then(function(data) {

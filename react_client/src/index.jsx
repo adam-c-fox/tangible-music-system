@@ -7,7 +7,8 @@ import Group from './Group';
 import Stack from './Stack';
 import Spotify from './Spotify';
 
-export const host = 'localhost';
+//export const host = 'localhost';
+export const host = '3.23.30.117';
 export const client = new W3CWebSocket(`ws://${host}:8001`);
 export const clientControllerPort = 8002;
 export const logicPort = 8003;

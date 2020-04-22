@@ -51,7 +51,8 @@ app.listen(port, () => { console.log(`logic REST interface: ${port}`); });
 
 // SPOTIFY ------------------------------ 
 
-const host = 'localhost';
+const host = process.env.HOST;
+console.log(`host: ${host}`);
 const spotifyPort = 8004;
 const utilsPort = 8005;
 const clientControllerPort = 8002;
