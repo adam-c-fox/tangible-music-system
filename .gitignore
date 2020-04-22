@@ -2,9 +2,9 @@ secrets.h
 .travis.yml
 .vscode
 .DS_STORE
-server/png/
-server/images
+server/utils/images
 server/.cache-adamfox26
 .gitignore
 *.code-workspace
 *.swp
+node_modules
