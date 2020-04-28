@@ -67,6 +67,39 @@ app.get('/spotify/send/top-tracks', function(req, res) {
     })
 });
 
+app.get('/spotify/send/artist-top-tracks', function(req, res) {
+  updateClientList();
+  const { artistName } = req.query;
+
+  axios.get(`http://${host}:${spotifyPort}/spotify/artist-top-tracks?artistName=${artistName}`)
+    .then(function (response) {
+      sendTracksToStacks(response.data.body.tracks);
+      res.status(200).send();
+    })
+});
+
+app.get('/spotify/send/similar-to-now-playing', function(req, res) {
+  updateClientList();
+  const nowPlayingTrackID = clientState.get(nfcCurrentlyPlaying).id;
+
+  axios.get(`http://${host}:${spotifyPort}/spotify/get-similar-tracks?trackID=${nowPlayingTrackID}`)
+    .then(function (response) {
+      console.log(response.data);
+      sendTracksToStacks(response.data);
+      res.status(200).send();
+    })
+});
+
+app.get('/spotify/send/something-different', function(req, res) {
+  updateClientList();
+
+  axios.get(`http://${host}:${spotifyPort}/spotify/get-similar-tracks`)
+    .then(function (response) {
+      sendTracksToStacks(response.data);
+      res.status(200).send();
+    })
+});
+
 // STACKS ------------------------------ 
 let clientList = [];
 let nfcCurrentlyPlaying = '';
