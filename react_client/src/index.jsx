@@ -7,8 +7,8 @@ import Group from './Group';
 import Stack from './Stack';
 import Spotify from './Spotify';
 
-//export const host = 'localhost';
-export const host = '3.23.30.117';
+export const host = 'localhost';
+// export const host = '3.23.30.117';
 export const client = new W3CWebSocket(`ws://${host}:8001`);
 export const clientControllerPort = 8002;
 export const logicPort = 8003;
@@ -26,6 +26,7 @@ class App extends Component {
       backendHasSpotifyCreds: null,
       spotifyWasPlaying: false,
       nfcCurrentlyPlaying: '',
+      nfcCurrentlyPlayingTimeout: null,
     };
 
     this.updateClientState = this.updateClientState.bind(this);
@@ -63,12 +64,15 @@ class App extends Component {
         }
       } else if ('nfc' in jsonMessage) {
         const { nfc } = jsonMessage;
-        const { nfcCurrentlyPlaying } = this.state;
+        const { nfcCurrentlyPlaying, nfcCurrentlyPlayingTimeout } = this.state;
 
         // ignore if same tag is reported
         if (nfc !== nfcCurrentlyPlaying) {
           this.setState({ nfcCurrentlyPlaying: nfc });
           const { uri } = clientState.get(nfc);
+
+          const timeout = setTimeout(() => this.nfcSpotifyTimeoutHandler(), 3000);
+          this.setState({ nfcCurrentlyPlayingTimeout: timeout });
 
           fetch(`http://${host}:${spotifyPort}/spotify/play/track?trackUri=${uri}`, {
             method: 'POST',
@@ -77,6 +81,11 @@ class App extends Component {
               'Content-Type': 'application/json',
             },
           });
+        } else {
+          // if same tag is reported, reset timeout
+          clearTimeout(nfcCurrentlyPlayingTimeout);
+          const timeout = setTimeout(() => this.nfcSpotifyTimeoutHandler(), 3000);
+          this.setState({ nfcCurrentlyPlayingTimeout: timeout });
         }
       } else if ('mac' in jsonMessage && 'spotifyPayload' in jsonMessage) {
         const { mac, spotifyPayload } = jsonMessage;
@@ -95,6 +104,11 @@ class App extends Component {
     fetch(`http://${host}:${spotifyPort}/spotify/has-credentials`)
       .then((res) => res.json())
       .then((res) => this.setState({ backendHasSpotifyCreds: res }));
+  }
+
+  nfcSpotifyTimeoutHandler() {
+    this.setState({ nfcCurrentlyPlaying: '' });
+    fetch(`http://${host}:${spotifyPort}/spotify/control?command=pause`, { method: 'POST' });
   }
 
   isMacCurrentlyPlaying(mac) {
