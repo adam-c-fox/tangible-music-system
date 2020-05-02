@@ -20,6 +20,16 @@ const frontendWsServer = new webSocketServer({
 });
 frontend = null;
 
+// Business logic
+let repopulateLock = false;
+let lastCommand = {};
+const Command = {
+  topTracks: 'topTracks',
+  similarToNowPlaying: 'similarToNowPlaying',
+  somethingDifferent: 'somethingDifferent',
+  artistTopTracks: 'artistTopTracks'
+}
+
 function frontendLog(text) {
   console.log('[frontend] ' + text);
 }
@@ -47,9 +57,31 @@ app.post('/frontend/send', function(req, res) {
     res.status(200).send();
 });
 
-app.listen(port, () => { console.log(`logic REST interface: ${port}`); });
+app.get('/stacks/repopulate', function(req, res) {
+    if(repopulateLock) { return; }
 
-// SPOTIFY ------------------------------ 
+    console.log("REPOPULATE: ", lastCommand);
+
+    switch(lastCommand.command) {
+      case Command.topTracks:
+        spotifyTopTracks(res);
+        break;
+      case Command.similarToNowPlaying:
+        spotifySimilarToNowPlaying(lastCommand.payload, res);
+        break;
+      case Command.somethingDifferent:
+        spotifySomethingDifferent(res);
+        break;
+      case Command.artistTopTracks:
+        spotifyArtistTopTracks(lastCommand.payload, res);
+        break;
+    }
+
+    repopulateLock = true;
+    setTimeout(() => { repopulateLock = false; }, 1000);
+});
+
+// SPOTIFY FUNCTIONS ------------------------------ 
 
 const host = process.env.HOST;
 console.log(`host: ${host}`);
@@ -57,59 +89,82 @@ const spotifyPort = 8004;
 const utilsPort = 8005;
 const clientControllerPort = 8002;
 
-app.get('/spotify/send/top-tracks', function(req, res) {
-  updateClientList();
-
+function spotifyTopTracks(res) {
   axios.get(`http://${host}:${spotifyPort}/spotify/top-tracks`)
     .then(function (response) {
       sendTracksToStacks(response.data);
       res.status(200).send();
-    })
-});
+    });
+}
 
-app.get('/spotify/send/artist-top-tracks', function(req, res) {
-  updateClientList();
-  const { artistName } = req.query;
-
+function spotifyArtistTopTracks(artistName, res) {
   axios.get(`http://${host}:${spotifyPort}/spotify/artist-top-tracks?artistName=${artistName}`)
     .then(function (response) {
       sendTracksToStacks(response.data.body.tracks);
       res.status(200).send();
-    })
-});
+    });
+}
 
-app.get('/spotify/send/similar-to-now-playing', function(req, res) {
-  updateClientList();
-  const nowPlayingTrackID = clientState.get(nfcCurrentlyPlaying).id;
-
+function spotifySimilarToNowPlaying(nowPlayingTrackID, res) {
   axios.get(`http://${host}:${spotifyPort}/spotify/get-similar-tracks?trackID=${nowPlayingTrackID}`)
     .then(function (response) {
-      console.log(response.data);
       sendTracksToStacks(response.data);
       res.status(200).send();
-    })
-});
+    });
+}
 
-app.get('/spotify/send/something-different', function(req, res) {
-  updateClientList();
-
+function spotifySomethingDifferent(res) {
   axios.get(`http://${host}:${spotifyPort}/spotify/get-similar-tracks`)
     .then(function (response) {
       sendTracksToStacks(response.data);
       res.status(200).send();
-    })
+    });
+}
+
+// SPOTIFY ENDPOINTS ------------------------------ 
+
+app.get('/spotify/send/top-tracks', function(req, res) {
+  lastCommand.command = Command.topTracks;
+
+  updateClientList();
+  spotifyTopTracks(res);
+});
+
+app.get('/spotify/send/artist-top-tracks', function(req, res) {
+  lastCommand.command = Command.artistTopTracks;
+
+  updateClientList();
+  const { artistName } = req.query;
+  lastCommand.payload = artistName;
+  spotifyArtistTopTracks(artistName, res);
+});
+
+app.get('/spotify/send/similar-to-now-playing', function(req, res) {
+  lastCommand.command = Command.similarToNowPlaying;
+
+  updateClientList();
+  const nowPlayingTrackID = clientState.get(nfcCurrentlyPlaying).id;
+  lastCommand.payload = nowPlayingTrackID;
+  spotifySimilarToNowPlaying(nowPlayingTrackID, res);
+});
+
+app.get('/spotify/send/something-different', function(req, res) {
+  lastCommand.command = Command.somethingDifferent;
+  
+  updateClientList();
+  spotifySomethingDifferent(res);
 });
 
 // STACKS ------------------------------ 
 let clientList = [];
 let nfcCurrentlyPlaying = '';
 const clientState = new Map();
+const stackNowPlayingTimeout = null;
 
 function sendTracksToStacks(list) {
   clientList.forEach((element) => {
     const mac = element[0];
 
-    // TODO: implement currently playing stack
     if(mac === nfcCurrentlyPlaying) { return; }
 
     const index = Math.floor(Math.random() * (list.length - 1));
@@ -174,3 +229,6 @@ function sendImageToStack(id, x, y, pngUrl) {
   const bodyString = `mac=${id}&pngUrl=${pngUrl}&x=${x}&y=${y}`;
   axios.post(`http://${host}:${clientControllerPort}/send/image?${bodyString}`);
 }
+
+
+app.listen(port, () => { console.log(`logic REST interface: ${port}`); });

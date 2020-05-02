@@ -29,6 +29,7 @@ let nfcToMac = new Map();
 nfcToMac.set(89, 'A4:CF:12:76:9A:A8');
 nfcToMac.set(95, '80:7D:3A:DB:D9:24');
 nfcToMac.set(108, '24:6F:28:AE:99:9C');
+let thumps = 0;
 
 const host = process.env.HOST;
 console.log(`host: ${host}`);
@@ -69,6 +70,16 @@ clientsWsServer.on('request', function(request) {
 
     if ('mac' in msgContents && numOfFields === 1) {
       macToConnections.set(msgContents.mac, userID);
+    } else if ('thump' in msgContents) {
+      thumps = thumps + 1;
+      const timeout = setTimeout(() => { thumps = thumps - 1; }, 1000);
+      addThumpTimeout(timeout);
+
+      if(thumps >= 3) {
+        console.log("TIME TO REPOPULATE!");
+        axios.get('http://localhost:8003/stacks/repopulate');
+        clearAllThumpTimeouts();
+      }
     } else /*if(frontend != null)*/ {
       const json = { id: Number(userID), mac: msgContents['mac'], focus: msgContents['focus'] }
       axios.post('http://localhost:8003/frontend/send', { payload: json })
@@ -83,6 +94,21 @@ clientsWsServer.on('request', function(request) {
     clientsLog(`${new Date()} Peer ${userID} disconnected.`);
   });
 });
+
+let timeouts = [];
+
+function addThumpTimeout(timeout) {
+  timeouts.push(timeout);
+}
+
+function clearAllThumpTimeouts() {
+  timeouts.forEach((element) => {
+    clearTimeout(element);
+  })
+
+  timeouts = [];
+  thumps = 0;
+}
 
 
 // STACK CONTROL ENDPOINTS ----------------------------------------  
