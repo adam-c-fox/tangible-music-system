@@ -7,6 +7,7 @@ app.use(express.json());
 app.use(cors());
 
 // Image conversion
+const imageSize = 240;
 const sharp = require("sharp");
 const fs = require('fs');
 const request = require('request');
@@ -24,7 +25,7 @@ console.log(`host: ${host}`);
 
 function convert(srcFilepath, destFilepath, res, url) {
   sharp(srcFilepath)
-    .resize(100, 100)
+    .resize(imageSize, imageSize)
     .png()
     .toFile(destFilepath, (err, info) => {
       //console.log(err);
@@ -56,15 +57,17 @@ app.post('/convert/jpeg-to-png', function(req, res) {
   const filename = jpegUrl.substr(jpegUrl.lastIndexOf('/') + 1);
   const srcFilepath =  './images/download/' + filename + ".jpeg";
   const destFilepath = './images/png/' + filename + ".png";
+  const returnUrl = `http://${host}:${imageHostPort}/images/png/${filename}.png`;
 
-  // TODO: cache, check against already downloaded files
+  if (fs.existsSync(destFilepath)) {
+    res.status(200).json(returnUrl);
+    return;
+  }
 
   // https -> http
   jpegUrl = jpegUrl.replace(/^https:\/\//i, 'http://');
 
   // Retrieve image, pass to conversion
-  // TODO: migrate to global host ip
-  const returnUrl = `http://${host}:${imageHostPort}/images/png/${filename}.png`;
   request(jpegUrl).pipe(fs.createWriteStream(srcFilepath)).on('close', () => wait(srcFilepath, destFilepath, res, returnUrl));
 });
 
