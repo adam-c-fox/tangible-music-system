@@ -8,6 +8,7 @@
 #include "utility/MPU6886.h"
 #include <esp_wifi.h>
 
+// #define HOST "ws://3.23.30.117:8000"
 #define HOST "ws://192.168.1.33:8000"
 
 // Accelerometer
@@ -17,6 +18,12 @@ float gyroZoffset = 0;
 float gyroX = 0;
 float gyroY = 0;
 float gyroZ = 0;
+float accX = 0;
+float accY = 0;
+float accZ = 0;
+float prevAccX = 0;
+float prevAccY = 0;
+float prevAccZ = 0;
 float threshold = 15;
 int previousStationaryState = 3;
 bool previousState = true;
@@ -151,6 +158,21 @@ bool isStationary() {
   }
 }
 
+bool isThump() {
+  prevAccX = accX;
+  prevAccY = accY;
+  prevAccZ = accZ;
+
+  mpu.getAccelData(&accX, &accY, &accZ);
+
+  if (accZ > prevAccZ*1.04 || accZ < prevAccZ*0.96) {
+    Serial.println("thump");
+    return true;
+  }
+
+  return false;
+}
+
 void loop() {
   wsClient.poll();
 
@@ -168,6 +190,16 @@ void loop() {
     obj["mac"] = WiFi.macAddress();
     String json = JSON.stringify(obj);
     wsClient.send(json);
+  } else if (stationary) {
+    bool thump = isThump();
+
+    if (thump) {
+      JSONVar obj;
+      obj["thump"] = true;
+      obj["mac"] = WiFi.macAddress();
+      String json = JSON.stringify(obj);
+      wsClient.send(json);
+    }
   }
 
   delay(100);
