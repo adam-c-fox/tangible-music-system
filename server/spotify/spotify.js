@@ -94,6 +94,21 @@ app.get('/spotify/get-tracks-from-playlist', function(req, res) {
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 });
 
+app.get('/spotify/get-my-playlists', function(req, res) {
+  let id = null;
+
+  spotifyApi.getMe()
+    .then(function(data) {
+      id = data.body.id;
+    });
+
+  spotifyApi.getUserPlaylists(id)
+    .then(function(data) {
+      res.status(200).json(data.body.items);
+    });
+
+});
+
 app.post('/spotify/control', function(req, res) {
   const { command } = req.query;
 
@@ -116,6 +131,18 @@ app.post('/spotify/play/track', function(req, res) {
 
   spotifyApi.play(json)
     .then(function(data) { console.log("[spotify] play track: " + trackUri); })
+    .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
+
+  res.status(200).send();
+});
+
+app.post('/spotify/play/playlist', function(req, res) {
+  const { playlistUri } = req.query;
+
+  const json = { context_uri: playlistUri };
+
+  spotifyApi.play(json)
+    .then(function(data) { console.log("[spotify] play playlist: " + playlistUri); })
     .catch(function(err) { console.log("[spotify] Something went wrong...", err) });
 
   res.status(200).send();

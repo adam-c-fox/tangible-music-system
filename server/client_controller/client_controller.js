@@ -9,7 +9,8 @@ const clientsWsPort = 8000;
 const clientsServer = http.createServer();
 clientsServer.listen(clientsWsPort);
 const clientsWsServer = new webSocketServer({
-  httpServer: clientsServer
+  httpServer: clientsServer,
+  keepalive: false,
 });
 
 // Express
@@ -76,7 +77,6 @@ clientsWsServer.on('request', function(request) {
       addThumpTimeout(timeout);
 
       if(thumps >= 3) {
-        console.log("TIME TO REPOPULATE!");
         axios.get('http://localhost:8003/stacks/repopulate');
         clearAllThumpTimeouts();
       }

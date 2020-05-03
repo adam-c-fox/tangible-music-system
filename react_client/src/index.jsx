@@ -48,7 +48,13 @@ class App extends Component {
       if ('focus' in jsonMessage) {
         if (jsonMessage.focus) {
           const spotifyPayload = clientState.get(jsonMessage.mac);
-          this.setState({ activeImageUrl: (spotifyPayload != null) ? spotifyPayload.album.images[0].url : '' });
+
+          // (Album|Playlist) URL
+          let url = '';
+          if (spotifyPayload != null) {
+            url = this.isPlaylist(spotifyPayload) ? spotifyPayload.images[0].url : spotifyPayload.album.images[0].url;
+          }
+          this.setState({ activeImageUrl: url });
 
           if (audioPlayer == null && spotifyPayload != null && !this.isMacCurrentlyPlaying(jsonMessage.mac)) {
             fetch(`http://${host}:${spotifyPort}/spotify/is-playing`)
@@ -74,13 +80,23 @@ class App extends Component {
           const timeout = setTimeout(() => this.nfcSpotifyTimeoutHandler(), 3000);
           this.setState({ nfcCurrentlyPlayingTimeout: timeout });
 
-          fetch(`http://${host}:${spotifyPort}/spotify/play/track?trackUri=${uri}`, {
-            method: 'POST',
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-          });
+          if (this.isPlaylist(clientState.get(nfc))) {
+            fetch(`http://${host}:${spotifyPort}/spotify/play/playlist?playlistUri=${uri}`, {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+              },
+            });
+          } else {
+            fetch(`http://${host}:${spotifyPort}/spotify/play/track?trackUri=${uri}`, {
+              method: 'POST',
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+              },
+            });
+          }
         } else {
           // if same tag is reported, reset timeout
           clearTimeout(nfcCurrentlyPlayingTimeout);
@@ -114,6 +130,10 @@ class App extends Component {
   isMacCurrentlyPlaying(mac) {
     const { nfcCurrentlyPlaying } = this.state;
     return (nfcCurrentlyPlaying === mac);
+  }
+
+  isPlaylist(spotifyPayload) {
+    return ('collaborative' in spotifyPayload);
   }
 
   startPreview(previewUrl, spotifyWasPlaying) {

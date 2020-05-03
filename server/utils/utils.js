@@ -35,7 +35,7 @@ function convert(srcFilepath, destFilepath, res, url) {
 }
 
 async function wait(srcFilepath, destFilepath, res, url) {
-  await sleep(300);
+  await sleep(100);
   convert(srcFilepath, destFilepath, res, url); 
 }
 

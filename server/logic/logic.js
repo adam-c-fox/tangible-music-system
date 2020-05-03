@@ -27,7 +27,8 @@ const Command = {
   topTracks: 'topTracks',
   similarToNowPlaying: 'similarToNowPlaying',
   somethingDifferent: 'somethingDifferent',
-  artistTopTracks: 'artistTopTracks'
+  artistTopTracks: 'artistTopTracks',
+  myPlaylists: 'myPlaylists'
 }
 
 function frontendLog(text) {
@@ -75,6 +76,9 @@ app.get('/stacks/repopulate', function(req, res) {
       case Command.artistTopTracks:
         spotifyArtistTopTracks(lastCommand.payload, res);
         break;
+      case Command.spotifySendMyPlaylists:
+        spotifySendMyPlaylists(res);
+        break;
     }
 
     repopulateLock = true;
@@ -121,6 +125,15 @@ function spotifySomethingDifferent(res) {
     });
 }
 
+function spotifySendMyPlaylists(res) {
+  axios.get(`http://${host}:${spotifyPort}/spotify/get-my-playlists`)
+    .then(function (response) {
+      console.log(response);
+      sendPlaylistsToStacks(response.data);
+      res.status(200).send();
+    });
+}
+
 // SPOTIFY ENDPOINTS ------------------------------ 
 
 app.get('/spotify/send/top-tracks', function(req, res) {
@@ -155,6 +168,13 @@ app.get('/spotify/send/something-different', function(req, res) {
   spotifySomethingDifferent(res);
 });
 
+app.get('/spotify/send/my-playlists', function(req, res) {
+  lastCommand.command = Command.myPlaylists;
+
+  updateClientList();
+  spotifySendMyPlaylists(res);
+})
+
 // STACKS ------------------------------ 
 let clientList = [];
 let nfcCurrentlyPlaying = '';
@@ -181,6 +201,34 @@ function sendTracksToStacks(list) {
 
     // Convert and send image
     axios.post(`http://${host}:${utilsPort}/convert/jpeg-to-png?jpegUrl=${spotifyPayload.album.images[0].url}`)
+      .then(function (response) {
+        sendImageToStack(mac, 0, 0, response.data);
+      })
+
+    clientState.set(mac, spotifyPayload);
+    sendUpdatedStateToFrontend(mac, spotifyPayload);
+  });
+} 
+
+function sendPlaylistsToStacks(list) {
+  clientList.forEach((element) => {
+    const mac = element[0];
+
+    if(mac === nfcCurrentlyPlaying) { return; }
+
+    const index = Math.floor(Math.random() * (list.length - 1));
+    const spotifyPayload = list[index];
+    list.splice(index, 1);
+  
+    console.log(`${element[0]}: ${spotifyPayload.name}`);
+
+    // Send text
+    clearStackText(mac);
+    sendTextToStack(mac, 10, 250, spotifyPayload.name);
+    sendTextToStack(mac, 10, 265, spotifyPayload.tracks.total + ' tracks');
+
+    // Convert and send image
+    axios.post(`http://${host}:${utilsPort}/convert/jpeg-to-png?jpegUrl=${spotifyPayload.images[0].url}`)
       .then(function (response) {
         sendImageToStack(mac, 0, 0, response.data);
       })

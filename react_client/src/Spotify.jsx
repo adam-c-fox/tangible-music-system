@@ -27,6 +27,10 @@ export default class Spotify extends Component {
     fetch(`http://${host}:${logicPort}/spotify/send/something-different`);
   }
 
+  myPlaylists() {
+    fetch(`http://${host}:${logicPort}/spotify/send/my-playlists`);
+  }
+
   artistOnChange(event) {
     this.setState({ artistName: event.target.value });
   }
@@ -47,6 +51,7 @@ export default class Spotify extends Component {
         <button type="button" onClick={this.topTracksOnClick}>Top Tracks</button>
         <button type="button" onClick={this.similarToNowPlaying}>Similar to now playing</button>
         <button type="button" onClick={this.somethingDifferent}>Show me something different</button>
+        <button type="button" onClick={this.myPlaylists}>My Playlists</button>
 
         <form onSubmit={this.artistOnSubmit}>
           Search Artist
