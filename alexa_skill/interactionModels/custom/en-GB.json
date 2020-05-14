@@ -1,0 +1,134 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tangible music system",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "HelloWorldIntent",
+          "slots": [],
+          "samples": [
+            "hello",
+            "how are you",
+            "say hi world",
+            "say hi",
+            "hi",
+            "say hello world",
+            "say hello"
+          ]
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "TopTracksIntent",
+          "slots": [],
+          "samples": [
+            "play my top tracks",
+            "show me my top tracks",
+            "play top tracks",
+            "top tracks"
+          ]
+        },
+        {
+          "name": "SimilarToNowPlayingIntent",
+          "slots": [],
+          "samples": [
+            "what is similar to this",
+            "show me similar to now playing",
+            "similar"
+          ]
+        },
+        {
+          "name": "SomethingDifferentIntent",
+          "slots": [],
+          "samples": [
+            "play something else",
+            "I want to see something different",
+            "show me something different",
+            "something different"
+          ]
+        },
+        {
+          "name": "MyPlaylistsIntent",
+          "slots": [],
+          "samples": [
+            "can I see my playlists",
+            "show me my playlists",
+            "my playlists"
+          ]
+        },
+        {
+          "name": "SearchArtistIntent",
+          "slots": [],
+          "samples": [
+            "artist search",
+            "search for an artist"
+          ]
+        },
+        {
+          "name": "SpecifyArtistIntent",
+          "slots": [
+            {
+              "name": "artistName",
+              "type": "AMAZON.Artist"
+            }
+          ],
+          "samples": [
+            "specify artist {artistName}",
+            "show me music by {artistName}",
+            "the artist {artistName}",
+            "{artistName}"
+          ]
+        }
+      ],
+      "types": []
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "SpecifyArtistIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "artistName",
+              "type": "AMAZON.Artist",
+              "elicitationRequired": true,
+              "confirmationRequired": false,
+              "prompts": {
+                "elicitation": "Elicit.Slot.1463426840738.1183382427729"
+              }
+            }
+          ],
+          "delegationStrategy": "ALWAYS"
+        }
+      ],
+      "delegationStrategy": "ALWAYS"
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.1463426840738.1183382427729",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "which artist would you like to search for?"
+          }
+        ]
+      }
+    ]
+  },
+  "version": "12"
+}
